@@ -1,0 +1,9 @@
+msix_config:
+  display_name: Sendix
+  publisher_display_name: Sendix
+  identity_name: com.sendix.sendix
+  msix_version: 2.17.4.4
+  logo_path: assets/Logo/Sendix-windows.png
+  architecture: x64
+  install_certificate: true
+  capabilities: internetClient, internetClientServer, privateNetworkClientServer

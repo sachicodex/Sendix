@@ -1,0 +1,58 @@
+name: sendix
+description: Fast local file and text sharing between devices.
+publish_to: 'none'
+version: 2.17.4
+
+environment:
+  sdk: ^3.10.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  archive: ^3.4.10
+  connectivity_plus: ^6.0.5
+  crypto: ^3.0.3
+  desktop_drop: ^0.7.0
+  file_picker: ^8.3.7
+  flutter_svg: ^2.0.10
+  lottie: ^3.1.0
+  network_info_plus: ^5.0.2
+  open_filex: ^4.7.0
+  path: ^1.9.0
+  path_provider: ^2.1.2
+  permission_handler: ^11.2.0
+  window_size: ^0.1.0
+  window_manager: ^0.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  msix: ^3.16.7
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/Logo/
+    - assets/lottie/
+    - assets/svg/
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Montserrat-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Montserrat-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Montserrat-Bold.ttf
+          weight: 700
+
+msix_config:
+  display_name: Sendix
+  publisher_display_name: Sendix
+  identity_name: com.sachicodex.sendix
+  logo_path: assets/Logo/Sendix-windows.png
+  architecture: x64
+  install_certificate: true
+  capabilities: internetClient, internetClientServer, privateNetworkClientServer
