@@ -20,7 +20,7 @@
 | Platform | Package | Link | Notes |
 |---|---|---|---|
 | Android | APK | [Latest Release](https://github.com/sachicodex/Sendix/releases/latest) | Install from the release assets on your device. |
-| Windows | MSIX | [Latest Release](https://github.com/sachicodex/Sendix/releases/latest) | Recommended install for the best desktop and share-target experience. |
+| Windows | EXE | [Latest Release](https://github.com/sachicodex/Sendix/releases/latest) | Recommended install for the best desktop and share-target experience. |
 | Linux / macOS / iOS / Web | Build from source | [Run From Source](#run-from-source) | Use Flutter build commands for your target platform. |
 
 ## About
@@ -117,9 +117,67 @@ flutter build apk --release
 # Windows
 flutter build windows --release
 
-# Windows MSIX
-dart run msix:create
+
+### Windows Installer (Inno Setup)
+
+Sendix uses a normal Inno Setup EXE installer.
+
+Prerequisites:
+- Install **Inno Setup 6**.
+- Build the Windows release first: `flutter build windows --release`.
+
+The installer script is saved at:
+
+```text
+installer\Sendix.iss
 ```
+
+To compile from VS Code:
+
+1. Press `Ctrl + Shift + B`.
+2. Choose `Release: Build Windows Installer`.
+3. VS Code runs the Flutter Windows release build, then compiles `installer\Sendix.iss`.
+4. The setup EXE is created at `installer\Output\Sendix-Setup.exe`.
+
+To compile from Inno Setup:
+
+1. Open `installer\Sendix.iss` in Inno Setup Compiler.
+2. Click **Compile**.
+3. The setup EXE is created at `installer\Output\Sendix-Setup.exe`.
+
+Script Wizard settings used for Sendix:
+
+| Wizard page | Value |
+|---|---|
+| Application name | `Sendix` |
+| Application version | `4.3.17` |
+| Publisher | `Sachicodex` |
+| Destination base folder | `(Custom)` |
+| Custom destination folder | `{localappdata}\Programs` |
+| Application folder name | `Sendix` |
+| Main executable | `build\windows\x64\runner\Release\Sendix.exe` |
+| Other application files | Add the full `build\windows\x64\runner\Release` folder |
+| File association | Disabled |
+| Start Menu shortcut | Enabled |
+| Desktop shortcut option | Enabled |
+| Documentation files | Blank |
+| Install mode | Non administrative install mode, current user only |
+| Registry import file | Blank |
+| Project root folder | installer |
+| Installer subfolder | Output |
+| Compiler output folder | Output |
+| Output base file name | `Sendix-Setup` |
+| Setup password | Blank |
+| Preprocessor directives | Enabled |
+|  ISS file location | installer |
+
+This installs to:
+
+```text
+%LOCALAPPDATA%\Programs\Sendix
+```
+
+That keeps installation user-friendly and avoids requiring admin rights.
 
 ## Setup A-Z
 
@@ -199,7 +257,6 @@ assets/
 | File input | `file_picker`, `desktop_drop` |
 | Desktop/mobile UI | `flutter_svg`, `lottie` |
 | Desktop shell | `window_manager`, `window_size` |
-| Windows packaging | `msix` |
 
 ## Publisher
 
