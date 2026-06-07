@@ -150,7 +150,7 @@ Script Wizard settings used for Sendix:
 | Wizard page | Value |
 |---|---|
 | Application name | `Sendix` |
-| Application version | `4.3.17` |
+| Application version | `2.17.4` |
 | Publisher | `Sachicodex` |
 | Destination base folder | `(Custom)` |
 | Custom destination folder | `{localappdata}\Programs` |

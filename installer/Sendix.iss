@@ -33,7 +33,7 @@ DisableProgramGroupPage=yes
 ; Remove the following line to run in administrative install mode (install for all users).
 PrivilegesRequired=lowest
 OutputDir=F:\02 Soft Dev\Flutter Development\Sendix\installer\Output
-OutputBaseFilename=Musix-Setup
+OutputBaseFilename=Sendix-Setup
 SetupIconFile=F:\02 Soft Dev\Flutter Development\Sendix\assets\Icon\Sendix.ico
 SolidCompression=yes
 WizardStyle=modern dynamic
