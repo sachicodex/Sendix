@@ -90,7 +90,9 @@ class EmptyState extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: messageStyle.copyWith(
                           color: AppColors.textSecondary,
+                          fontSize: tight ? 12 : 14
                         ),
+                        
                       ),
                       if (action != null) ...[
                         SizedBox(height: tight ? 10 : 14),

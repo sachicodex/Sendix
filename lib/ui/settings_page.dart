@@ -44,6 +44,7 @@ class _SettingsPageState extends State<SettingsPage>
   bool _savingDeviceName = false;
   late final AnimationController _checkController;
   late final Animation<double> _checkTurns;
+  late final Animation<double> _checkScale;
   late final Animation<Color?> _checkColor;
 
   @override
@@ -51,21 +52,21 @@ class _SettingsPageState extends State<SettingsPage>
     super.initState();
     _checkController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 1),
-      reverseDuration: const Duration(seconds: 1),
+      duration: const Duration(milliseconds: 620),
+      reverseDuration: const Duration(milliseconds: 420),
     );
-    _checkTurns = Tween<double>(begin: 0.0, end: 1 / 12).animate(
-      CurvedAnimation(parent: _checkController, curve: Curves.easeInOutSine),
+    _checkTurns = Tween<double>(begin: 0.0, end: 0.045).animate(
+      CurvedAnimation(parent: _checkController, curve: Curves.easeOutBack),
+    );
+    _checkScale = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _checkController, curve: Curves.easeOutBack),
     );
     _checkColor =
         ColorTween(
           begin: AppColors.success,
           end: AppColors.primaryAccent,
         ).animate(
-          CurvedAnimation(
-            parent: _checkController,
-            curve: Curves.easeInOutSine,
-          ),
+          CurvedAnimation(parent: _checkController, curve: Curves.easeOutCubic),
         );
   }
 
@@ -91,7 +92,11 @@ class _SettingsPageState extends State<SettingsPage>
   }
 
   void _onCheckTap() {
-    if (_savingDeviceName || _checkController.isAnimating) return;
+    if (_savingDeviceName ||
+        _checkController.isAnimating ||
+        _deviceNameController.text.trim().isEmpty) {
+      return;
+    }
     _checkController.forward(from: 0).then((_) => _checkController.reverse());
     _saveDeviceName();
   }
@@ -125,7 +130,7 @@ class _SettingsPageState extends State<SettingsPage>
               TextField(
                 controller: _deviceNameController,
                 textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _saveDeviceName(),
+                onSubmitted: (_) => _onCheckTap(),
                 decoration: InputDecoration(
                   hintText: 'e.g. My Laptop',
                   isDense: true,
@@ -140,33 +145,36 @@ class _SettingsPageState extends State<SettingsPage>
                         child: AnimatedBuilder(
                           animation: _checkController,
                           builder: (context, _) {
-                            return RotationTransition(
-                              turns: _checkTurns,
-                              child: Container(
-                                width: 18,
-                                height: 18,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(100),
-                                  color: _checkColor.value,
-                                ),
-                                child: Center(
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      const Icon(
-                                        Icons.check_sharp,
-                                        size: 17,
-                                        color: AppColors.surface,
-                                      ),
-                                      Transform.translate(
-                                        offset: const Offset(0.5, 0.5),
-                                        child: const Icon(
+                            return ScaleTransition(
+                              scale: _checkScale,
+                              child: RotationTransition(
+                                turns: _checkTurns,
+                                child: Container(
+                                  width: 18,
+                                  height: 18,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(100),
+                                    color: _checkColor.value,
+                                  ),
+                                  child: Center(
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        const Icon(
                                           Icons.check_sharp,
                                           size: 17,
                                           color: AppColors.surface,
                                         ),
-                                      ),
-                                    ],
+                                        Transform.translate(
+                                          offset: const Offset(0.5, 0.5),
+                                          child: const Icon(
+                                            Icons.check_sharp,
+                                            size: 17,
+                                            color: AppColors.surface,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),

@@ -950,7 +950,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         final shell = Scaffold(
           appBar: AppBar(
             title: Text(
-              '- SENDIX -',
+              'SENDIX',
               style: AppTextStyles.titleLarge.copyWith(
                 color: AppColors.primaryAccent,
                 fontSize: 20,
