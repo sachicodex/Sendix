@@ -4,54 +4,55 @@ import 'package:sendix/ui/theme/colors.dart';
 class AppTextStyles {
   const AppTextStyles._();
 
-  static const String _font = 'Montserrat';
+  static const String _font = 'SFProDisplay';
 
-  static const TextStyle headlineSmall = TextStyle(
+  static const TextStyle headline1 = TextStyle(
     fontFamily: _font,
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
+    color: AppColors.onBg,
   );
 
-  static const TextStyle titleLarge = TextStyle(
-    fontFamily: _font,
-    fontSize: 22,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
-  );
-
-  static const TextStyle titleMedium = TextStyle(
+  static const TextStyle headline2 = TextStyle(
     fontFamily: _font,
     fontSize: 16,
     fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
+    color: AppColors.onBg,
+    letterSpacing: 0.5,
   );
 
-  static const TextStyle titleSmall = TextStyle(
+  static const TextStyle headline3 = TextStyle(
     fontFamily: _font,
     fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: AppColors.onBg,
+    letterSpacing: 0.5,
+  );
+
+  static const TextStyle bodyText1 = TextStyle(
+    fontFamily: _font,
+    fontSize: 16,
+    color: AppColors.onBg,
+    letterSpacing: 0.3,
+  );
+
+  static const TextStyle button = TextStyle(
+    fontFamily: _font,
+    fontSize: 16,
     fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
+    color: AppColors.bg,
   );
 
-  static const TextStyle bodyMedium = TextStyle(
-    fontFamily: _font,
-    fontSize: 14,
-    fontWeight: FontWeight.w400,
-    color: AppColors.textPrimary,
-  );
-
+  // Material-style aliases retained for the existing UI.
+  static const TextStyle headlineSmall = headline1;
+  static const TextStyle titleLarge = headline1;
+  static const TextStyle titleMedium = headline2;
+  static const TextStyle titleSmall = headline3;
+  static const TextStyle bodyMedium = bodyText1;
   static const TextStyle bodySmall = TextStyle(
     fontFamily: _font,
     fontSize: 12,
-    fontWeight: FontWeight.w400,
-    color: AppColors.textPrimary,
+    color: AppColors.onSurface,
   );
-
-  static const TextStyle labelLarge = TextStyle(
-    fontFamily: _font,
-    fontSize: 14,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
-  );
+  static const TextStyle labelLarge = headline3;
 }

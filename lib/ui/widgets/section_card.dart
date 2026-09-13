@@ -45,7 +45,10 @@ class SectionCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: AppTextStyles.titleMedium.copyWith(height: 1.1),
+                      style: AppTextStyles.titleMedium.copyWith(
+                        height: 1.1,
+                        color: AppColors.primary,
+                      ),
                     ),
                     if (subtitle case final s?) ...[
                       const SizedBox(height: 8),

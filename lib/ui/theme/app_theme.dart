@@ -8,14 +8,14 @@ class AppTheme {
   static final ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
     scaffoldBackgroundColor: AppColors.background,
-    fontFamily: 'Montserrat',
+    fontFamily: 'SFProDisplay',
     colorScheme: const ColorScheme.dark(
       primary: AppColors.primaryAccent,
       surface: AppColors.surface,
     ),
     textTheme: ThemeData.dark().textTheme
         .apply(
-          fontFamily: 'Montserrat',
+          fontFamily: 'SFProDisplay',
           bodyColor: AppColors.textPrimary,
           displayColor: AppColors.textPrimary,
         )
@@ -118,7 +118,7 @@ class AppTheme {
       backgroundColor: AppColors.appBar,
       surfaceTintColor: Colors.transparent,
       titleTextStyle: TextStyle(
-        fontFamily: 'Montserrat',
+        fontFamily: 'SFProDisplay',
         fontSize: 20,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,

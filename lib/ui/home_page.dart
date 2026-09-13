@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:sendix/core/file_manager.dart';
 import 'package:sendix/core/networking/transfer_control.dart';
 import 'package:sendix/core/platform/share_receiver.dart';
+import 'package:sendix/core/platform/windows_network_profile.dart';
 import 'package:sendix/features/receive/receive_controller.dart';
 import 'package:sendix/features/receive/receive_settings_controller.dart';
 import 'package:sendix/features/send/send_controller.dart';
@@ -49,12 +52,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   late final PageController _pageController = PageController(initialPage: 0);
   final _sendOverlaySpeedTracker = TransferSpeedTracker();
   static const Duration _splashDuration = Duration(seconds: 2);
+  final Completer<void> _initialSplashCompleted = Completer<void>();
   Timer? _splashTimer;
   bool _splashVisible = true;
   int? _pendingIndex;
   int _splashSeed = 0;
   final Set<String> _completedSeen = {};
   Timer? _completionTimer;
+  Timer? _networkProfileTimer;
+  final WindowsNetworkProfile _windowsNetworkProfile =
+      const WindowsNetworkProfile();
+  bool _privateNetworkActive = false;
+  bool _networkWarningVisible = false;
   bool _completionVisible = false;
   int _completionSeed = 0;
   static const Duration _completionDuration = Duration(milliseconds: 1600);
@@ -65,7 +74,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    unawaited(_startServices());
     widget.sendController.transfers.addListener(_onSendTransfersChanged);
     widget.receiveController.transfers.addListener(_onReceiveTransfersChanged);
 
@@ -77,13 +85,26 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _shareSubscription = _shareReceiver.sharedPaths.listen(_handleSharedPaths);
 
     _startSplash();
+    unawaited(_startServices());
+    if (Platform.isWindows) {
+      unawaited(_checkWindowsNetworkProfile());
+      _networkProfileTimer = Timer.periodic(
+        const Duration(seconds: 3),
+        (_) => unawaited(_checkWindowsNetworkProfile()),
+      );
+    }
   }
 
   Future<void> _startServices() async {
     try {
+      await _initialSplashCompleted.future;
+      await _ensureDeviceName();
       await widget.receiveController.start();
       await widget.sendController.start();
       await widget.receiveSettingsController.start();
+      if (Platform.isWindows) {
+        unawaited(_checkWindowsNetworkProfile());
+      }
     } catch (error) {
       debugPrint('Failed to start Sendix services: $error');
     }
@@ -97,6 +118,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     unawaited(_shareReceiver.dispose());
     _sharedFiles.dispose();
     _completionTimer?.cancel();
+    _networkProfileTimer?.cancel();
     _pageController.dispose();
     widget.sendController.transfers.removeListener(_onSendTransfersChanged);
     widget.receiveController.transfers.removeListener(
@@ -113,7 +135,122 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       unawaited(widget.sendController.ensureDiscovery(broadcast: true));
+      if (Platform.isWindows) {
+        unawaited(_checkWindowsNetworkProfile());
+      }
     }
+  }
+
+  Future<void> _checkWindowsNetworkProfile() async {
+    if (!_initialSplashCompleted.isCompleted) return;
+    if (!widget.sendController.identity.nameConfigured) return;
+    final isPrivate = await _windowsNetworkProfile.isActiveNetworkPrivate();
+    if (!mounted) return;
+
+    _privateNetworkActive = isPrivate;
+    if (isPrivate) {
+      _showPrivateNetworkWarning();
+    } else if (_networkWarningVisible && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> _ensureDeviceName() async {
+    final identity = widget.sendController.identity;
+    if (identity.nameConfigured || !mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _DeviceNameDialog(onSubmit: identity.setName),
+    );
+  }
+
+  void _showPrivateNetworkWarning() {
+    if (_networkWarningVisible || !mounted) return;
+
+    _networkWarningVisible = true;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final dialogWidth = (MediaQuery.sizeOf(dialogContext).width - 48).clamp(
+          280.0,
+          460.0,
+        );
+        return PopScope(
+          canPop: false,
+          child: Dialog(
+            backgroundColor: AppColors.surface,
+            surfaceTintColor: Colors.transparent,
+            child: SizedBox(
+              width: dialogWidth.toDouble(),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        HugeIcon(
+                          icon: HugeIcons.strokeRoundedAlert01,
+                          color: AppColors.warning,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Private network detected',
+                            style: AppTextStyles.titleMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Windows is using a Private network profile. '
+                      'Android-to-Windows file transfers may not work until '
+                      'this connection is changed to Public.',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.bg,
+                        ),
+                        onPressed: () {
+                          unawaited(
+                            _windowsNetworkProfile.openNetworkSettings(),
+                          );
+                        },
+                        icon: const HugeIcon(
+                          icon: HugeIcons.strokeRoundedSetting06,
+                          size: 20,
+                        ),
+                        label: const Text('Open network settings'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    ).whenComplete(() {
+      _networkWarningVisible = false;
+      if (mounted && _privateNetworkActive) {
+        // The dialog should remain active while the profile is Private.
+        _showPrivateNetworkWarning();
+      }
+    });
   }
 
   void _onSendTransfersChanged() {
@@ -485,6 +622,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (_pageController.hasClients) {
       _pageController.jumpToPage(_index);
     }
+    if (!_initialSplashCompleted.isCompleted) {
+      _initialSplashCompleted.complete();
+    }
   }
 
   void _handleNavigation(int index) {
@@ -810,7 +950,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         final shell = Scaffold(
           appBar: AppBar(
             title: Text(
-              'SENDIX',
+              '- SENDIX -',
               style: AppTextStyles.titleLarge.copyWith(
                 color: AppColors.primaryAccent,
                 fontSize: 20,
@@ -917,6 +1057,94 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       unitIndex++;
     }
     return '${size.toStringAsFixed(1)} ${units[unitIndex]}';
+  }
+}
+
+class _DeviceNameDialog extends StatefulWidget {
+  const _DeviceNameDialog({required this.onSubmit});
+
+  final Future<void> Function(String name) onSubmit;
+
+  @override
+  State<_DeviceNameDialog> createState() => _DeviceNameDialogState();
+}
+
+class _DeviceNameDialogState extends State<_DeviceNameDialog> {
+  late final TextEditingController _controller = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final name = _controller.text.trim();
+    if (name.isEmpty || _saving) return;
+
+    setState(() => _saving = true);
+    try {
+      await widget.onSubmit(name);
+      if (mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: AlertDialog(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        title: Text('Name your device', style: AppTextStyles.titleMedium),
+        content: TextField(
+          controller: _controller,
+          autofocus: true,
+          maxLength: 32,
+          buildCounter:
+              (
+                context, {
+                required currentLength,
+                required isFocused,
+                maxLength,
+              }) => null,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _submit(),
+          decoration: const InputDecoration(
+            hintText: 'e.g. My Laptop',
+            labelText: 'Device name',
+          ),
+        ),
+        actions: [
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _controller,
+            builder: (context, value, _) {
+              final enabled = value.text.trim().isNotEmpty && !_saving;
+              return SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.bg,
+                  ),
+                  onPressed: enabled ? _submit : null,
+                  child: _saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Continue'),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
   }
 }
 

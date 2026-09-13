@@ -8,6 +8,7 @@ class EmptyState extends StatelessWidget {
     required this.title,
     required this.message,
     this.icon = Icons.wifi_tethering_error_rounded,
+    this.iconColor = AppColors.primaryAccent,
     this.iconBuilder,
     this.showIconBackground = true,
     this.action,
@@ -16,6 +17,7 @@ class EmptyState extends StatelessWidget {
   final String title;
   final String message;
   final IconData icon;
+  final Color iconColor;
   final Widget Function(double iconSize)? iconBuilder;
   final bool showIconBackground;
   final Widget? action;
@@ -41,7 +43,7 @@ class EmptyState extends StatelessWidget {
             : AppTextStyles.bodyMedium;
         final iconWidget =
             iconBuilder?.call(iconSize) ??
-            Icon(icon, color: AppColors.primaryAccent, size: iconSize);
+            Icon(icon, color: iconColor, size: iconSize);
 
         return Center(
           child: ConstrainedBox(

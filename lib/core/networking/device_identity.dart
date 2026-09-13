@@ -8,11 +8,13 @@ class DeviceIdentity {
   DeviceIdentity({
     required this.id,
     required this.name,
+    this.nameConfigured = false,
     required this.capabilities,
   });
 
   final String id;
   String name;
+  bool nameConfigured;
   final List<String> capabilities;
 
   static Future<DeviceIdentity> load() async {
@@ -29,16 +31,19 @@ class DeviceIdentity {
 
     final nameFile = File(p.join(supportDir.path, 'device_name.txt'));
     String deviceName;
+    var nameConfigured = false;
     if (await nameFile.exists()) {
       deviceName = (await nameFile.readAsString()).trim();
+      nameConfigured = deviceName.isNotEmpty;
     } else {
-      deviceName = Platform.localHostname.trim();
+      deviceName = '';
     }
     if (deviceName.isEmpty) deviceName = 'Sendix Device';
 
     return DeviceIdentity(
       id: id,
       name: deviceName,
+      nameConfigured: nameConfigured,
       capabilities: const ['files', 'text', 'images'],
     );
   }
@@ -47,6 +52,7 @@ class DeviceIdentity {
     final trimmed = value.trim();
     if (trimmed.isEmpty) return;
     name = trimmed;
+    nameConfigured = true;
 
     final supportDir = await getApplicationSupportDirectory();
     final nameFile = File(p.join(supportDir.path, 'device_name.txt'));

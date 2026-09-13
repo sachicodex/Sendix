@@ -1251,7 +1251,9 @@ class _DevicesPane extends StatelessWidget {
             return const EmptyState(
               title: 'No devices',
               message: 'Turn on Wi-Fi on both devices and keep Sendix open.',
-              icon: Icons.devices,
+              icon: Icons.devices_rounded,
+              iconColor: AppColors.onBg,
+              showIconBackground: false,
             );
           }
 
