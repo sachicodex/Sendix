@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sendix/core/error_messages.dart';
 import 'package:sendix/models/transfer.dart';
 import 'package:sendix/ui/theme/colors.dart';
 import 'package:sendix/ui/theme/text_styles.dart';
@@ -32,10 +33,6 @@ class TransferProgressTile extends StatelessWidget {
     final percent = (value * 100).clamp(0, 100).toStringAsFixed(0);
 
     final speed = speedBytesPerSecond;
-    final speedText = (speed == null || speed <= 0)
-        ? '—'
-        : '${_formatBytes(speed)}/s';
-
     final remaining = speed != null && speed > 0 && progress.progress < 1
         ? _formatDuration(
             ((progress.totalBytes - progress.transferredBytes) / speed).ceil(),
@@ -48,17 +45,13 @@ class TransferProgressTile extends StatelessWidget {
             TransferStatus.inProgress =>
               [
                     if (remaining != null) '$remaining remaining',
-                    if (speed != null && speed > 0) speedText,
                   ].join(' • ').isEmpty
                   ? 'Transferring'
-                  : [
-                      if (remaining != null) '$remaining remaining',
-                      if (speed != null && speed > 0) speedText,
-                    ].join(' • '),
+                  : [if (remaining != null) '$remaining remaining'].join(' • '),
             TransferStatus.completed =>
               progress.direction == TransferDirection.send
-                  ? 'Transfer complete'
-                  : 'Receive complete',
+                  ? 'Sent completed'
+                  : 'Receive completed',
             TransferStatus.failed => 'Transfer failed',
             TransferStatus.cancelled => 'Cancelled',
           };
@@ -158,7 +151,7 @@ class TransferProgressTile extends StatelessWidget {
         if (progress.error case final e?) ...[
           const SizedBox(height: 8),
           Text(
-            e,
+            userErrorMessage(e),
             style: AppTextStyles.bodySmall.copyWith(color: AppColors.danger),
           ),
         ],
@@ -202,21 +195,38 @@ class SendixProgressBar extends StatefulWidget {
 }
 
 class _AnimatedProgressBarState extends State<SendixProgressBar>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
+  late final AnimationController _progress;
   late final AnimationController _shimmer = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1400),
   );
+  late Animation<double> _valueAnimation;
 
   @override
   void initState() {
     super.initState();
+    final initial = widget.value.clamp(0.0, 1.0).toDouble();
+    _valueAnimation = AlwaysStoppedAnimation<double>(initial);
+    _progress = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 160),
+    );
     if (widget.active) _shimmer.repeat();
   }
 
   @override
   void didUpdateWidget(covariant SendixProgressBar oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final target = widget.value.clamp(0.0, 1.0).toDouble();
+    final current = _valueAnimation.value;
+    if ((target - current).abs() > 0.0001) {
+      _valueAnimation = Tween<double>(
+        begin: current,
+        end: target,
+      ).animate(CurvedAnimation(parent: _progress, curve: Curves.easeOutCubic));
+      _progress.forward(from: 0);
+    }
     if (widget.active && !oldWidget.active) {
       _shimmer.repeat();
     } else if (!widget.active && oldWidget.active) {
@@ -226,6 +236,7 @@ class _AnimatedProgressBarState extends State<SendixProgressBar>
 
   @override
   void dispose() {
+    _progress.dispose();
     _shimmer.dispose();
     super.dispose();
   }
@@ -244,11 +255,10 @@ class _AnimatedProgressBarState extends State<SendixProgressBar>
           decoration: BoxDecoration(color: trackColor),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              return TweenAnimationBuilder<double>(
-                tween: Tween<double>(end: widget.value.clamp(0.0, 1.0)),
-                duration: const Duration(milliseconds: 160),
-                curve: Curves.easeOutCubic,
-                builder: (context, animatedValue, _) {
+              return AnimatedBuilder(
+                animation: Listenable.merge([_progress, _shimmer]),
+                builder: (context, _) {
+                  final animatedValue = _valueAnimation.value;
                   final targetWidth = constraints.maxWidth * animatedValue;
                   final starting = widget.active && widget.value <= 0;
                   final complete = widget.value >= 0.999;
@@ -274,8 +284,8 @@ class _AnimatedProgressBarState extends State<SendixProgressBar>
                                 end: Alignment(-0.45 + _shimmer.value * 2, 0),
                                 colors: [
                                   baseColor,
-                                  baseColor.withValues(alpha: 0.82),
-                                  AppColors.onTertiary.withValues(alpha: 0.42),
+                                  baseColor,
+                                  Color(0xff1E1E1E),
                                   baseColor,
                                 ],
                                 stops: const [0, 0.42, 0.52, 1],

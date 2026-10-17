@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:sendix/core/file_manager.dart';
+import 'package:sendix/core/transfer_history_store.dart';
 import 'package:sendix/core/networking/socket_manager.dart';
 import 'package:sendix/core/networking/transfer_control.dart';
 import 'package:sendix/core/networking/transfer_engine.dart';
@@ -15,21 +16,25 @@ class ReceiveController {
     required TransferEngine transferEngine,
     required FileManager fileManager,
     required ReceiveSettingsController settingsController,
+    TransferHistoryStore? historyStore,
+    List<TransferProgress> initialTransfers = const [],
   }) : _socketManager = socketManager,
        _transferEngine = transferEngine,
        _fileManager = fileManager,
-       _settingsController = settingsController;
+       _settingsController = settingsController,
+       _historyStore = historyStore,
+       transfers = ValueNotifier<List<TransferProgress>>(initialTransfers);
 
   final SocketManager _socketManager;
   final TransferEngine _transferEngine;
   final FileManager _fileManager;
   final ReceiveSettingsController _settingsController;
+  final TransferHistoryStore? _historyStore;
 
   final StreamController<TransferRequest> _requestsController =
       StreamController<TransferRequest>.broadcast();
 
-  final ValueNotifier<List<TransferProgress>> transfers =
-      ValueNotifier<List<TransferProgress>>([]);
+  final ValueNotifier<List<TransferProgress>> transfers;
 
   Stream<TransferRequest> get incomingRequests => _requestsController.stream;
 
@@ -53,6 +58,7 @@ class ReceiveController {
       ..removeWhere((t) => t.transferId == transferId);
     transfers.value = current;
     _startTimes.remove(transferId);
+    unawaited(_historyStore?.remove(transferId) ?? Future<void>.value());
   }
 
   Future<void> start() async {
@@ -123,6 +129,7 @@ class ReceiveController {
       _startTimes.putIfAbsent(progress.transferId, DateTime.now);
     }
     transfers.value = current;
+    unawaited(_historyStore?.record(progress) ?? Future<void>.value());
 
     if (progress.status != TransferStatus.inProgress) {
       final control = _controls.remove(progress.transferId);

@@ -12,6 +12,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sendix/core/file_manager.dart';
+import 'package:sendix/core/error_messages.dart';
 import 'package:sendix/core/platform/installed_apps.dart';
 import 'package:sendix/features/receive/receive_settings_controller.dart';
 import 'package:sendix/features/send/send_controller.dart';
@@ -406,7 +407,7 @@ if (\$icon -ne \$null) {
       if (!mounted) return;
       showAppSnackBar(
         context,
-        'Failed to add app: $error',
+        userErrorMessage(error),
         type: AppSnackBarType.error,
       );
     }
@@ -847,7 +848,7 @@ if (\$icon -ne \$null) {
       if (!mounted) return;
       showAppSnackBar(
         context,
-        'Send failed: $error',
+        userErrorMessage(error),
         type: AppSnackBarType.error,
       );
     } finally {
@@ -1589,7 +1590,7 @@ class _DevicesPane extends StatelessWidget {
                     ),
                     child: const Center(
                       child: HugeIcon(
-                        icon: HugeIcons.strokeRoundedWifiConnected01,
+                        icon: HugeIcons.strokeRoundedWifiDisconnected03,
                         size: 25,
                         color: AppColors.primary,
                       ),
@@ -1637,11 +1638,17 @@ class _DevicesPane extends StatelessWidget {
                       selected: isSelected,
                       onTap: canSelect ? () => onSelected(device) : null,
                       trailing: IconButton(
+                        tooltip: isFavourite
+                            ? 'Remove from favourites'
+                            : 'Add to favourites',
                         icon: Icon(
                           isFavourite
-                              ? Icons.favorite_sharp
-                              : Icons.favorite_border,
-                          color: AppColors.success.withAlpha(150),
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          size: 25,
+                          color: isFavourite
+                              ? const Color(0xFFFFB547)
+                              : AppColors.textTertiary,
                         ),
 
                         onPressed: () => onToggleFavourite(device.id),

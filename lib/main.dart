@@ -7,9 +7,11 @@ import 'package:sendix/core/networking/discovery_service.dart';
 import 'package:sendix/core/networking/socket_manager.dart';
 import 'package:sendix/core/receive_settings/receive_settings_store.dart';
 import 'package:sendix/core/networking/transfer_engine.dart';
+import 'package:sendix/core/transfer_history_store.dart';
 import 'package:sendix/features/receive/receive_controller.dart';
 import 'package:sendix/features/receive/receive_settings_controller.dart';
 import 'package:sendix/features/send/send_controller.dart';
+import 'package:sendix/models/transfer.dart';
 import 'package:sendix/ui/app_scroll_behavior.dart';
 import 'package:sendix/ui/home_page.dart';
 import 'package:sendix/ui/theme/app_theme.dart';
@@ -25,6 +27,7 @@ Future<void> main() async {
   final socketManager = SocketManager();
   final transferEngine = TransferEngine();
   final fileManager = FileManager();
+  final historyStore = await TransferHistoryStore.open();
   final receiveSettingsController = ReceiveSettingsController(
     store: ReceiveSettingsStore(),
   );
@@ -35,6 +38,8 @@ Future<void> main() async {
     socketManager: socketManager,
     transferEngine: transferEngine,
     fileManager: fileManager,
+    historyStore: historyStore,
+    initialTransfers: historyStore.recordsFor(TransferDirection.send),
   );
 
   final receiveController = ReceiveController(
@@ -42,6 +47,8 @@ Future<void> main() async {
     transferEngine: transferEngine,
     fileManager: fileManager,
     settingsController: receiveSettingsController,
+    historyStore: historyStore,
+    initialTransfers: historyStore.recordsFor(TransferDirection.receive),
   );
 
   runApp(

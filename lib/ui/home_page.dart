@@ -1000,8 +1000,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                       child: Row(
                                         children: [
                                           const HugeIcon(
-                                            icon:
-                                                HugeIcons.strokeRoundedWatch01,
+                                            icon: HugeIcons.strokeRoundedLaptop,
                                             color: AppColors.primary,
                                             size: 24,
                                           ),
@@ -1320,8 +1319,8 @@ class _SendTransferOverlayCard extends StatelessWidget {
         : AppColors.success;
     final statusLabel = completed
         ? (progress.direction == TransferDirection.send
-              ? 'Transfer complete'
-              : 'Receive complete')
+              ? 'Sent completed'
+              : 'Receive completed')
         : isWaiting
         ? 'Pending approval'
         : paused
@@ -1739,7 +1738,7 @@ class _CompletionBadgeState extends State<_CompletionBadge>
     final accent = AppColors.success;
     final highlight = Color.lerp(accent, Colors.white, 0.35) ?? accent;
     final title = isSend ? 'Sent successfully' : 'Received successfully';
-    final subtitle = 'Transfer complete';
+    final subtitle = isSend ? 'Sent completed' : 'Receive completed';
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 280, maxWidth: 360),

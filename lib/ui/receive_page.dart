@@ -39,9 +39,6 @@ class _ReceivePageState extends State<ReceivePage> {
     _receiveLottieAsset,
   );
 
-  bool _isMobileLayout(BuildContext context) =>
-      MediaQuery.sizeOf(context).width < 520;
-
   Widget _buildReceiveEmptyIcon(double iconSize) {
     final lottieSize = iconSize * 2;
     return FutureBuilder<ByteData>(
@@ -251,7 +248,6 @@ class _ReceivePageState extends State<ReceivePage> {
                   ? TransferProgressTile(
                       progress: progress,
                       speedBytesPerSecond: _speedTracker.update(progress),
-                      showDirectionIcon: !_isMobileLayout(context),
                       isPaused: false,
                     )
                   : ValueListenableBuilder<bool>(
@@ -260,7 +256,6 @@ class _ReceivePageState extends State<ReceivePage> {
                         return TransferProgressTile(
                           progress: progress,
                           speedBytesPerSecond: _speedTracker.update(progress),
-                          showDirectionIcon: !_isMobileLayout(context),
                           isPaused: paused,
                           onPauseResume:
                               progress.status == TransferStatus.inProgress
@@ -296,11 +291,24 @@ class _ReceivePageState extends State<ReceivePage> {
             96,
           ),
           children: [
-            header(),
-            for (var i = 0; i < ordered.length; i++) ...[
-              if (i != 0) const SizedBox(height: 12),
-              transferCard(ordered[i]),
-            ],
+            GlassCard(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              tintColor: AppColors.surface,
+              tintOpacity: 0.78,
+              borderColor: AppColors.borderFocus,
+              borderOpacity: 0.82,
+              blurSigma: 22,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  header(),
+                  for (var i = 0; i < ordered.length; i++) ...[
+                    if (i != 0) const SizedBox(height: 12),
+                    transferCard(ordered[i]),
+                  ],
+                ],
+              ),
+            ),
           ],
         );
       },

@@ -56,6 +56,40 @@ class TransferProgress {
     return (transferredBytes / totalBytes).clamp(0.0, 1.0);
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'transferId': transferId,
+      'direction': direction.name,
+      'fileName': fileName,
+      'localPath': localPath,
+      'totalBytes': totalBytes,
+      'transferredBytes': transferredBytes,
+      'status': status.name,
+      'error': error,
+    };
+  }
+
+  static TransferProgress? fromJson(Map<String, dynamic> json) {
+    try {
+      final direction = TransferDirection.values.byName(
+        json['direction'] as String,
+      );
+      final status = TransferStatus.values.byName(json['status'] as String);
+      return TransferProgress(
+        transferId: json['transferId'] as String,
+        direction: direction,
+        fileName: json['fileName'] as String,
+        localPath: json['localPath'] as String?,
+        totalBytes: (json['totalBytes'] as num).toInt(),
+        transferredBytes: (json['transferredBytes'] as num).toInt(),
+        status: status,
+        error: json['error'] as String?,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   TransferProgress copyWith({
     String? transferId,
     TransferDirection? direction,

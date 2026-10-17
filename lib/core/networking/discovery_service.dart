@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:sendix/core/networking/constants.dart';
 import 'package:sendix/core/networking/device_identity.dart';
@@ -149,7 +150,9 @@ class DiscoveryService {
       InternetAddress.anyIPv4,
       _discoveryPort,
       reuseAddress: true,
-      reusePort: true,
+      // Windows does not support SO_REUSEPORT. Keeping it enabled there
+      // produces a noisy socket error even though discovery can continue.
+      reusePort: defaultTargetPlatform != TargetPlatform.windows,
     );
     _socket!.broadcastEnabled = true;
     _socket!.listen(_handleEvent);

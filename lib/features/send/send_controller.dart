@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:sendix/core/file_manager.dart';
+import 'package:sendix/core/transfer_history_store.dart';
 import 'package:sendix/core/networking/constants.dart';
 import 'package:sendix/core/networking/device_identity.dart';
 import 'package:sendix/core/networking/discovery_service.dart';
@@ -19,19 +20,23 @@ class SendController {
     required SocketManager socketManager,
     required TransferEngine transferEngine,
     required FileManager fileManager,
+    TransferHistoryStore? historyStore,
+    List<TransferProgress> initialTransfers = const [],
   }) : _discovery = discoveryService,
        _socketManager = socketManager,
        _transferEngine = transferEngine,
-       _fileManager = fileManager;
+       _fileManager = fileManager,
+       _historyStore = historyStore,
+       transfers = ValueNotifier<List<TransferProgress>>(initialTransfers);
 
   final DeviceIdentity identity;
   final DiscoveryService _discovery;
   final SocketManager _socketManager;
   final TransferEngine _transferEngine;
   final FileManager _fileManager;
+  final TransferHistoryStore? _historyStore;
 
-  final ValueNotifier<List<TransferProgress>> transfers =
-      ValueNotifier<List<TransferProgress>>([]);
+  final ValueNotifier<List<TransferProgress>> transfers;
 
   Stream<List<DeviceInfo>> get devices => _discovery.devices;
 
@@ -113,6 +118,7 @@ class SendController {
       current.add(progress);
     }
     transfers.value = current;
+    unawaited(_historyStore?.record(progress) ?? Future<void>.value());
 
     if (progress.status == TransferStatus.completed ||
         progress.status == TransferStatus.failed ||
