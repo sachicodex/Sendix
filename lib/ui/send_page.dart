@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:desktop_drop/desktop_drop.dart';
@@ -6,6 +7,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hugeicons/hugeicons.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sendix/core/file_manager.dart';
@@ -22,6 +25,7 @@ import 'package:sendix/ui/widgets/empty_state.dart';
 import 'package:sendix/ui/widgets/section_card.dart';
 import 'package:sendix/ui/widgets/action_tile.dart';
 import 'package:sendix/ui/widgets/svg_icon.dart';
+import 'package:sendix/widgets/Glass Card/glass_carrd.dart';
 
 class SendPage extends StatefulWidget {
   const SendPage({
@@ -43,7 +47,8 @@ class SendPage extends StatefulWidget {
   State<SendPage> createState() => _SendPageState();
 }
 
-class _SendPageState extends State<SendPage> {
+class _SendPageState extends State<SendPage>
+    with SingleTickerProviderStateMixin {
   DeviceInfo? _selectedDevice;
   List<TransferFile> _selectedFiles = [];
   bool _sending = false;
@@ -54,12 +59,38 @@ class _SendPageState extends State<SendPage> {
   final ScrollController _scrollController = ScrollController(
     keepScrollOffset: false,
   );
+  final Map<String, Uint8List> _knownAppIcons = {};
+  final Set<String> _loadingFileIcons = {};
+  late final AnimationController _dropPulse;
 
   @override
   void initState() {
     super.initState();
+    _dropPulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
     widget.sharedFiles.addListener(_onSharedFilesChanged);
     _applySharedFiles(widget.sharedFiles.value);
+    unawaited(_loadKnownAppIcons());
+  }
+
+  Future<void> _loadKnownAppIcons() async {
+    if (!_isAndroidPlatform) return;
+    try {
+      final apps = await InstalledApps.list();
+      if (!mounted) return;
+      setState(() {
+        for (final app in apps) {
+          final icon = app.iconPng;
+          if (icon != null && app.apkPath.isNotEmpty) {
+            _knownAppIcons[p.normalize(app.apkPath)] = icon;
+          }
+        }
+      });
+    } catch (_) {
+      // The platform app icon channel is optional on desktop builds.
+    }
   }
 
   @override
@@ -76,6 +107,7 @@ class _SendPageState extends State<SendPage> {
   void dispose() {
     widget.sharedFiles.removeListener(_onSharedFilesChanged);
     _scrollController.dispose();
+    _dropPulse.dispose();
     super.dispose();
   }
 
@@ -101,17 +133,65 @@ class _SendPageState extends State<SendPage> {
 
   void _addSelectedFiles(List<TransferFile> files) {
     if (files.isEmpty) return;
-    final current = List<TransferFile>.from(_selectedFiles);
-    final existing = current
+    final current = <TransferFile>[];
+    final existing = _selectedFiles
         .map((f) => f.absolutePath ?? f.relativePath)
         .toSet();
+    final added = <String>{};
     for (final f in files) {
       final key = f.absolutePath ?? f.relativePath;
-      if (existing.add(key)) {
+      if (added.add(key) && !existing.contains(key)) {
         current.add(f);
       }
     }
-    setState(() => _selectedFiles = current);
+    if (current.isEmpty) return;
+    setState(() => _selectedFiles = [...current, ..._selectedFiles]);
+    for (final file in current) {
+      final path = file.absolutePath;
+      if (path != null) unawaited(_loadWindowsFileIcon(path));
+    }
+  }
+
+  Future<void> _loadWindowsFileIcon(String path) async {
+    if (!_isWindowsPlatform || _loadingFileIcons.contains(path)) return;
+    final ext = p.extension(path).toLowerCase();
+    if (!{'.exe', '.msi', '.com', '.scr'}.contains(ext)) return;
+    _loadingFileIcons.add(path);
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final output = p.join(tempDir.path, 'sendix_icon_${path.hashCode}.png');
+      final encodedPath = base64Encode(utf8.encode(path));
+      final script =
+          '''
+Add-Type -AssemblyName System.Drawing
+\$path = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$encodedPath'))
+\$out = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${base64Encode(utf8.encode(output))}'))
+\$icon = [System.Drawing.Icon]::ExtractAssociatedIcon(\$path)
+if (\$icon -ne \$null) {
+  \$bitmap = \$icon.ToBitmap()
+  \$bitmap.Save(\$out, [System.Drawing.Imaging.ImageFormat]::Png)
+  \$bitmap.Dispose()
+  \$icon.Dispose()
+}
+''';
+      await Process.run('powershell.exe', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-Command',
+        script,
+      ]);
+      final iconFile = File(output);
+      if (!await iconFile.exists()) return;
+      final bytes = await iconFile.readAsBytes();
+      if (!mounted || bytes.isEmpty) return;
+      setState(() => _knownAppIcons[p.normalize(path)] = bytes);
+    } catch (_) {
+      // Keep the HugeIcon fallback when Windows cannot extract an icon.
+    } finally {
+      _loadingFileIcons.remove(path);
+    }
   }
 
   void _setSelectedFiles(List<TransferFile> files) {
@@ -122,41 +202,99 @@ class _SendPageState extends State<SendPage> {
       }
     });
     _lastAutoSendKey = null;
+    for (final file in files) {
+      final path = file.absolutePath;
+      if (path != null) unawaited(_loadWindowsFileIcon(path));
+    }
   }
 
-  IconData _iconFor(TransferFile file) {
-    final ext = p.extension(file.absolutePath ?? file.name).toLowerCase();
-    switch (ext) {
-      case '.png':
-      case '.jpg':
-      case '.jpeg':
-      case '.webp':
-      case '.gif':
-      case '.bmp':
-        return Icons.image_rounded;
-      case '.txt':
-      case '.md':
-      case '.json':
-      case '.xml':
-      case '.yaml':
-      case '.yml':
-        return Icons.text_snippet_rounded;
-      default:
-        return Icons.insert_drive_file_rounded;
-    }
+  List<List<dynamic>> _hugeIconForExtension(String extension) {
+    return switch (extension) {
+      '.txt' ||
+      '.md' ||
+      '.json' ||
+      '.xml' ||
+      '.yaml' ||
+      '.yml' ||
+      '.log' ||
+      '.ini' ||
+      '.toml' => HugeIcons.strokeRoundedNote01,
+      '.doc' ||
+      '.docx' ||
+      '.odt' ||
+      '.rtf' => HugeIcons.strokeRoundedFileAttachment,
+      '.pdf' => HugeIcons.strokeRoundedFile02,
+      '.xls' ||
+      '.xlsx' ||
+      '.csv' ||
+      '.ods' => HugeIcons.strokeRoundedFileSpreadsheet,
+      '.ppt' || '.pptx' || '.odp' => HugeIcons.strokeRoundedPresentation01,
+      '.mp3' ||
+      '.wav' ||
+      '.flac' ||
+      '.aac' ||
+      '.m4a' ||
+      '.ogg' ||
+      '.wma' => HugeIcons.strokeRoundedMusicNote01,
+      '.mp4' ||
+      '.mov' ||
+      '.mkv' ||
+      '.avi' ||
+      '.webm' ||
+      '.m4v' => HugeIcons.strokeRoundedFileVideo,
+      '.png' ||
+      '.jpg' ||
+      '.jpeg' ||
+      '.webp' ||
+      '.gif' ||
+      '.bmp' ||
+      '.tiff' ||
+      '.svg' => HugeIcons.strokeRoundedImage01,
+      '.zip' ||
+      '.rar' ||
+      '.7z' ||
+      '.tar' ||
+      '.gz' ||
+      '.bz2' ||
+      '.xz' => HugeIcons.strokeRoundedFileZip,
+      '.apk' ||
+      '.aab' ||
+      '.ipa' ||
+      '.exe' ||
+      '.msi' ||
+      '.dmg' => HugeIcons.strokeRoundedPackage01,
+      '.dart' ||
+      '.js' ||
+      '.ts' ||
+      '.jsx' ||
+      '.tsx' ||
+      '.html' ||
+      '.css' ||
+      '.java' ||
+      '.kt' ||
+      '.swift' ||
+      '.py' ||
+      '.c' ||
+      '.cpp' ||
+      '.h' ||
+      '.sql' ||
+      '.sh' ||
+      '.bat' => HugeIcons.strokeRoundedFileCode,
+      _ => HugeIcons.strokeRoundedFile01,
+    };
   }
 
   Future<void> _pickFiles() async {
     final files = await widget.controller.pickFiles();
     if (!mounted) return;
-    _setSelectedFiles(files);
+    _addSelectedFiles(files);
     _maybeAutoSend();
   }
 
   Future<void> _pickDirectory() async {
     final files = await widget.controller.pickDirectory();
     if (!mounted) return;
-    _setSelectedFiles(files);
+    _addSelectedFiles(files);
     _maybeAutoSend();
   }
 
@@ -438,6 +576,27 @@ class _SendPageState extends State<SendPage> {
       '.xml',
       '.yaml',
       '.yml',
+      '.log',
+      '.ini',
+      '.toml',
+      '.csv',
+      '.dart',
+      '.js',
+      '.ts',
+      '.jsx',
+      '.tsx',
+      '.html',
+      '.css',
+      '.java',
+      '.kt',
+      '.swift',
+      '.py',
+      '.c',
+      '.cpp',
+      '.h',
+      '.sql',
+      '.sh',
+      '.bat',
     }.contains(ext);
 
     if (isImage) {
@@ -445,17 +604,18 @@ class _SendPageState extends State<SendPage> {
         context: context,
         builder: (context) {
           return Dialog(
+            backgroundColor: Colors.transparent,
             insetPadding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
+            child: GlassCard(
+              width: 760,
+              height: 560,
+              padding: const EdgeInsets.all(12),
+              tintColor: AppColors.surface,
+              tintOpacity: 0.96,
+              borderColor: AppColors.borderFocus,
+              borderOpacity: 0.9,
               constraints: const BoxConstraints(maxWidth: 760, maxHeight: 560),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: InteractiveViewer(
-                  minScale: 0.6,
-                  maxScale: 4,
-                  child: Image.file(File(path), fit: BoxFit.contain),
-                ),
-              ),
+              child: _ImagePreview(path: path),
             ),
           );
         },
@@ -467,43 +627,78 @@ class _SendPageState extends State<SendPage> {
       await showDialog<void>(
         context: context,
         builder: (context) {
-          return AlertDialog(
-            title: Text(
-              file.name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.titleSmall,
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 24,
             ),
-            content: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640, maxHeight: 520),
-              child: FutureBuilder<String>(
-                future: File(path).readAsString(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState != ConnectionState.done) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return const Text('Failed to load preview.');
-                  }
-                  final text = snapshot.data ?? '';
-                  return SingleChildScrollView(
-                    child: SelectableText(
-                      text,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        fontSize: 16,
-                        height: 1.5,
+            child: SizedBox(
+              width: 680,
+              height: 560,
+              child: GlassCard(
+                padding: EdgeInsets.zero,
+                tintColor: AppColors.surface,
+                tintOpacity: 0.96,
+                borderColor: AppColors.borderFocus,
+                borderOpacity: 0.9,
+                child: AlertDialog(
+                  backgroundColor: Colors.transparent,
+                  surfaceTintColor: Colors.transparent,
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          file.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.titleSmall,
+                        ),
                       ),
+                      IconButton(
+                        tooltip: 'Close preview',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const HugeIcon(
+                          icon: HugeIcons.strokeRoundedCancel01,
+                          size: 21,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  content: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: 640,
+                      maxHeight: 520,
                     ),
-                  );
-                },
+                    child: FutureBuilder<String>(
+                      future: File(path).readAsString(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState != ConnectionState.done) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                        if (snapshot.hasError) {
+                          return const Text('Failed to load preview.');
+                        }
+                        final text = snapshot.data ?? '';
+                        return SingleChildScrollView(
+                          child: SelectableText(
+                            text,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              fontSize: 16,
+                              height: 1.5,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Close'),
-              ),
-            ],
           );
         },
       );
@@ -513,31 +708,80 @@ class _SendPageState extends State<SendPage> {
     await showDialog<void>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text(file.name),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Size: ${_formatBytes(file.size)}'),
-                const SizedBox(height: 8),
-                Text(
-                  path,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.bodySmall,
-                ),
-              ],
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 24,
+          ),
+          child: SizedBox(
+            width: 520,
+            child: GlassCard(
+              padding: const EdgeInsets.all(24),
+              tintColor: AppColors.surface,
+              tintOpacity: 0.96,
+              borderColor: AppColors.borderFocus,
+              borderOpacity: 0.9,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      HugeIcon(
+                        icon: _hugeIconForExtension(ext),
+                        color: AppColors.primary,
+                        size: 25,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          file.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Close preview',
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const HugeIcon(
+                          icon: HugeIcons.strokeRoundedCancel01,
+                          size: 21,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '${ext.isEmpty ? 'File' : ext.substring(1).toUpperCase()} file · ${_formatBytes(file.size)}',
+                    style: AppTextStyles.titleSmall.copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    path,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodySmall,
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => OpenFilex.open(path),
+                      icon: const HugeIcon(
+                        icon: HugeIcons.strokeRoundedArrowUpRight01,
+                        size: 17,
+                      ),
+                      label: const Text('Open preview'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
         );
       },
     );
@@ -755,45 +999,127 @@ class _SendPageState extends State<SendPage> {
       );
     }
 
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: tiles
-          .map((t) => SizedBox(width: 108, child: t))
-          .toList(growable: false),
+    return SizedBox(
+      width: double.infinity,
+      child: Row(
+        children: [
+          for (var index = 0; index < tiles.length; index++) ...[
+            if (index > 0) const SizedBox(width: 12),
+            Expanded(child: tiles[index]),
+          ],
+        ],
+      ),
     );
   }
 
   Future<void> _showAddSheet() async {
     if (_sending) return;
-    final sheetWidth = MediaQuery.sizeOf(context).width;
     await showModalBottomSheet<void>(
       context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      constraints: BoxConstraints.tightFor(width: sheetWidth),
-      builder: (context) {
-        final tiles = _quickAddTiles(mobileOnly: _useMobileQuickAdd(context));
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  'What you want to send?',
-                  style: AppTextStyles.titleMedium,
+      isDismissible: true,
+      barrierLabel: 'Close file options',
+      barrierColor: Colors.black.withValues(alpha: 0.58),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      isScrollControlled: false,
+      useSafeArea: true,
+      builder: (sheetContext) {
+        final screenWidth = MediaQuery.sizeOf(sheetContext).width;
+        final compact = screenWidth < 600;
+        final sheetWidth = compact ? screenWidth : 560.0;
+        final tiles = _quickAddTiles(
+          mobileOnly: _useMobileQuickAdd(sheetContext),
+        );
+        final tileWidth = compact
+            ? (sheetWidth - 72) / 2
+            : (sheetWidth - 76) / 4;
+
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: sheetWidth),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                compact ? 8 : 16,
+                0,
+                compact ? 8 : 16,
+                compact ? 8 : 16,
+              ),
+              child: GlassCard(
+                width: sheetWidth,
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+                tintColor: AppColors.surface,
+                tintOpacity: 0.98,
+                borderColor: AppColors.borderFocus,
+                borderOpacity: 0.72,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.textTertiary,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Center(
+                      child: Text(
+                        'What do you want to send?',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.titleMedium,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (!compact)
+                      Row(
+                        children: [
+                          for (
+                            var index = 0;
+                            index < tiles.length;
+                            index++
+                          ) ...[
+                            if (index > 0) const SizedBox(width: 10),
+                            Expanded(
+                              child: _QuickAddTile(
+                                icon: tiles[index].icon,
+                                iconWidget: tiles[index].iconWidget,
+                                label: tiles[index].label,
+                                onTap: () {
+                                  Navigator.of(sheetContext).pop();
+                                  tiles[index].onTap();
+                                },
+                              ),
+                            ),
+                          ],
+                        ],
+                      )
+                    else
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: tiles
+                            .map(
+                              (tile) => SizedBox(
+                                width: tileWidth,
+                                child: _QuickAddTile(
+                                  icon: tile.icon,
+                                  iconWidget: tile.iconWidget,
+                                  label: tile.label,
+                                  onTap: () {
+                                    Navigator.of(sheetContext).pop();
+                                    tile.onTap();
+                                  },
+                                ),
+                              ),
+                            )
+                            .toList(growable: false),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: tiles
-                      .map((t) => SizedBox(width: 108, child: t))
-                      .toList(growable: false),
-                ),
-              ],
+              ),
             ),
           ),
         );
@@ -806,14 +1132,8 @@ class _SendPageState extends State<SendPage> {
     final sizeText = _formatBytes(_totalSelectedBytes);
     final mobileQuickAdd = _useMobileQuickAdd(context);
 
-    Widget buildFileTile(int fileIndex) {
+    Widget buildFileRow(int fileIndex) {
       final f = _selectedFiles[fileIndex];
-      void removeThis() {
-        final next = List<TransferFile>.from(_selectedFiles)
-          ..removeAt(fileIndex);
-        _setSelectedFiles(next);
-      }
-
       final path = f.absolutePath;
       final ext = p.extension(path ?? f.name).toLowerCase();
       final isImage = {
@@ -824,77 +1144,90 @@ class _SendPageState extends State<SendPage> {
         '.gif',
         '.bmp',
       }.contains(ext);
-      final isApp = {'.apk', '.aab', '.ipa'}.contains(ext);
+      final icon = _hugeIconForExtension(ext);
 
-      Widget content;
-      if (isImage && path != null) {
-        content = ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: Image.file(
-            File(path),
-            width: 56,
-            height: 56,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) {
-              return Icon(
-                Icons.image_rounded,
-                size: 24,
-                color: AppColors.primaryAccent,
-              );
-            },
-          ),
-        );
-      } else if (isApp) {
-        content = SvgIcon(
-          asset: 'assets/svg/app.svg',
-          color: AppColors.primaryAccent,
-          size: 24,
-        );
-      } else {
-        content = Icon(_iconFor(f), size: 24, color: AppColors.primaryAccent);
+      void removeThis() {
+        final next = List<TransferFile>.from(_selectedFiles)
+          ..removeAt(fileIndex);
+        _setSelectedFiles(next);
       }
 
-      return Tooltip(
-        message: f.relativePath,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: _sending ? null : () => _showPreview(f),
-            child: Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.surfaceTertiary),
-                color: AppCardTheme.base.surfaceSecondary,
+      final appIcon = path == null ? null : _knownAppIcons[p.normalize(path)];
+      final preview = isImage && path != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.file(
+                File(path),
+                width: 42,
+                height: 42,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) =>
+                    HugeIcon(icon: icon, size: 25, color: AppColors.primary),
               ),
-              alignment: Alignment.center,
-              child: Stack(
-                children: [
-                  Center(child: content),
-                  Positioned(
-                    top: 4,
-                    right: 4,
-                    child: Material(
-                      color: AppCardTheme.base.surfaceSecondary,
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: _sending ? null : removeThis,
-                        child: Padding(
-                          padding: const EdgeInsets.all(4),
-                          child: Icon(
-                            Icons.close_rounded,
-                            size: 14,
-                            color: AppColors.textPrimary,
-                          ),
+            )
+          : appIcon != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.memory(
+                appIcon,
+                width: 42,
+                height: 42,
+                fit: BoxFit.contain,
+              ),
+            )
+          : HugeIcon(icon: icon, size: 25, color: AppColors.primary);
+
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: _sending ? null : () => _showPreview(f),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 66),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceTertiary.withValues(alpha: 0.52),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                SizedBox(width: 44, height: 44, child: Center(child: preview)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        f.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.labelLarge.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${ext.isEmpty ? 'File' : ext.substring(1).toUpperCase()} · ${_formatBytes(f.size)}',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                IconButton(
+                  tooltip: 'Remove file',
+                  onPressed: _sending ? null : removeThis,
+                  icon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedCancel01,
+                    size: 19,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -961,77 +1294,47 @@ class _SendPageState extends State<SendPage> {
                           ),
                           color: AppCardTheme.base.surface,
                         ),
-                        child: const EmptyState(
-                          title: 'Drop files here',
-                          message: 'Or use the buttons above.',
-                          icon: Icons.cloud_upload_rounded,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            HugeIcon(
+                              icon: HugeIcons.strokeRoundedCloudUpload,
+                              size: 28,
+                              color: AppColors.onTertiary,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Drop files to add them',
+                              style: AppTextStyles.titleMedium,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Drop here or click to browse',
+                              style: AppTextStyles.bodySmall,
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
               ] else ...[
-                if (mobileQuickAdd)
-                  SizedBox(
-                    height: 88,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _selectedFiles.length + 1,
-                      separatorBuilder: (_, _) => const SizedBox(width: 10),
-                      itemBuilder: (context, index) {
-                        if (index == 0) {
-                          return _AddMoreTile(
-                            enabled: !_sending,
-                            onTap: _showAddSheet,
-                          );
-                        }
-                        return buildFileTile(index - 1);
-                      },
-                    ),
-                  )
-                else
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      const tile = 72.0;
-                      const spacing = 10.0;
-                      const maxRows = 3;
-                      final cols =
-                          ((constraints.maxWidth + spacing) / (tile + spacing))
-                              .floor()
-                              .clamp(1, 99);
-                      final itemCount = _selectedFiles.length + 1;
-                      final rows = (itemCount / cols).ceil().clamp(1, 999);
-                      final visibleRows = rows > maxRows ? maxRows : rows;
-                      final height =
-                          visibleRows * tile + (visibleRows - 1) * spacing;
-
-                      return SizedBox(
-                        height: height,
-                        child: GridView.builder(
-                          primary: false,
-                          physics: rows > maxRows
-                              ? const ClampingScrollPhysics()
-                              : const NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: cols,
-                                mainAxisSpacing: spacing,
-                                crossAxisSpacing: spacing,
-                                mainAxisExtent: tile,
-                              ),
-                          itemCount: itemCount,
-                          itemBuilder: (context, index) {
-                            if (index == 0) {
-                              return _AddMoreTile(
-                                enabled: !_sending,
-                                onTap: _showAddSheet,
-                              );
-                            }
-                            return buildFileTile(index - 1);
-                          },
-                        ),
-                      );
-                    },
+                _AddMoreRow(
+                  enabled: !_sending,
+                  onTap: _showAddSheet,
+                  dragging: false,
+                  animation: _dropPulse,
+                ),
+                const SizedBox(height: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 330),
+                  child: ListView.separated(
+                    primary: false,
+                    shrinkWrap: true,
+                    itemCount: _selectedFiles.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) => buildFileRow(index),
                   ),
+                ),
               ],
             ],
           ),
@@ -1049,10 +1352,19 @@ class _SendPageState extends State<SendPage> {
           children: [
             DropTarget(
               enable: !_sending,
-              onDragEntered: (_) => setState(() => _draggingSelection = true),
-              onDragExited: (_) => setState(() => _draggingSelection = false),
+              onDragEntered: (_) {
+                setState(() => _draggingSelection = true);
+                _dropPulse.repeat(reverse: true);
+              },
+              onDragExited: (_) {
+                setState(() => _draggingSelection = false);
+                _dropPulse.stop();
+                _dropPulse.value = 0;
+              },
               onDragDone: (details) {
                 setState(() => _draggingSelection = false);
+                _dropPulse.stop();
+                _dropPulse.value = 0;
                 final paths = details.files
                     .map((f) => f.path)
                     .where((p) => p.trim().isNotEmpty);
@@ -1060,22 +1372,35 @@ class _SendPageState extends State<SendPage> {
               },
               child: card,
             ),
-            if (_draggingSelection)
+            if (_draggingSelection && _selectedFiles.isEmpty)
+              Positioned(
+                left: 18,
+                right: 18,
+                bottom: 18,
+                height: 140,
+                child: IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: _dropPulse,
+                    builder: (context, _) => CustomPaint(
+                      painter: _MovingDashedBorderPainter(
+                        progress: _dropPulse.value,
+                        color: AppColors.primary,
+                        radius: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (_draggingSelection && _selectedFiles.isNotEmpty)
               Positioned.fill(
                 child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: AppCardTheme.base.radius,
-                      border: Border.all(
-                        color: AppColors.primaryAccent,
-                        width: 2,
-                      ),
-                      color: AppColors.surfaceTertiary,
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Drop to add',
-                        style: AppTextStyles.titleSmall,
+                  child: AnimatedBuilder(
+                    animation: _dropPulse,
+                    builder: (context, _) => CustomPaint(
+                      painter: _MovingDashedBorderPainter(
+                        progress: _dropPulse.value,
+                        color: AppColors.primary,
+                        radius: AppCardTheme.base.radius.topLeft.x,
                       ),
                     ),
                   ),
@@ -1248,12 +1573,47 @@ class _DevicesPane extends StatelessWidget {
           }
 
           if (devices.isEmpty) {
-            return const EmptyState(
-              title: 'No devices',
-              message: 'Turn on Wi-Fi on both devices and keep Sendix open.',
-              icon: Icons.devices_rounded,
-              iconColor: AppColors.onBg,
-              showIconBackground: false,
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.24),
+                      ),
+                    ),
+                    child: const Center(
+                      child: HugeIcon(
+                        icon: HugeIcons.strokeRoundedWifiConnected01,
+                        size: 25,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'No devices nearby',
+                          style: AppTextStyles.titleSmall,
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Turn on Wi-Fi and keep Sendix open on both devices.',
+                          style: AppTextStyles.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             );
           }
 
@@ -1298,6 +1658,166 @@ class _DevicesPane extends StatelessWidget {
   }
 }
 
+class _ImagePreview extends StatefulWidget {
+  const _ImagePreview({required this.path});
+
+  final String path;
+
+  @override
+  State<_ImagePreview> createState() => _ImagePreviewState();
+}
+
+class _ImagePreviewState extends State<_ImagePreview> {
+  final TransformationController _transform = TransformationController();
+
+  @override
+  void dispose() {
+    _transform.dispose();
+    super.dispose();
+  }
+
+  void _zoom(double factor) {
+    final current = _transform.value.getMaxScaleOnAxis();
+    final next = (current * factor).clamp(0.6, 4.0).toDouble();
+    final size = context.size;
+    if (size == null) return;
+    final center = Offset(size.width / 2, size.height / 2);
+    final ratio = next / current;
+    _transform.value = Matrix4.translationValues(center.dx, center.dy, 0)
+      ..scaleByDouble(ratio, ratio, ratio, 1)
+      ..translateByDouble(-center.dx, -center.dy, 0, 1)
+      ..multiply(_transform.value);
+  }
+
+  void _resetZoom() {
+    _transform.value = Matrix4.identity();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 48, right: 8, bottom: 8),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: InteractiveViewer(
+                transformationController: _transform,
+                minScale: 0.6,
+                maxScale: 4,
+                boundaryMargin: const EdgeInsets.all(80),
+                child: Image.file(File(widget.path), fit: BoxFit.contain),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 0,
+          right: 0,
+          child: IconButton(
+            tooltip: 'Close preview',
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const HugeIcon(
+              icon: HugeIcons.strokeRoundedCancel01,
+              size: 21,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ),
+        Positioned(
+          right: 4,
+          bottom: 4,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                tooltip: 'Reset zoom',
+                onPressed: _resetZoom,
+                icon: const HugeIcon(
+                  icon: HugeIcons.strokeRoundedRefresh,
+                  size: 20,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Zoom out',
+                onPressed: () => _zoom(0.8),
+                icon: const HugeIcon(
+                  icon: HugeIcons.strokeRoundedZoomOutArea,
+                  size: 20,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Zoom in',
+                onPressed: () => _zoom(1.25),
+                icon: const HugeIcon(
+                  icon: HugeIcons.strokeRoundedZoomInArea,
+                  size: 20,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MovingDashedBorderPainter extends CustomPainter {
+  const _MovingDashedBorderPainter({
+    required this.progress,
+    required this.color,
+    required this.radius,
+  });
+
+  final double progress;
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width <= 4 || size.height <= 4) return;
+    const strokeWidth = 2.0;
+    const dashLength = 9.0;
+    const gapLength = 7.0;
+    final inset = strokeWidth / 2;
+    final path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            inset,
+            inset,
+            size.width - strokeWidth,
+            size.height - strokeWidth,
+          ),
+          Radius.circular((radius - inset).clamp(0.0, radius)),
+        ),
+      );
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+    final metric = path.computeMetrics().first;
+    final period = dashLength + gapLength;
+    final offset = (progress * period) % period;
+    for (var start = -offset; start < metric.length; start += period) {
+      final from = start.clamp(0.0, metric.length);
+      final to = (start + dashLength).clamp(0.0, metric.length);
+      if (to > from) canvas.drawPath(metric.extractPath(from, to), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MovingDashedBorderPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.color != color ||
+      oldDelegate.radius != radius;
+}
+
 class _InfoChip extends StatelessWidget {
   const _InfoChip({required this.label, required this.value});
 
@@ -1333,16 +1853,26 @@ class _QuickAddTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hugeIcon = switch (label) {
+      'File' => HugeIcons.strokeRoundedFile01,
+      'Folder' => HugeIcons.strokeRoundedFolder01,
+      'Images' || 'Image' => HugeIcons.strokeRoundedImage01,
+      'Text' => HugeIcons.strokeRoundedNote01,
+      _ => null,
+    };
     return SizedBox(
       height: 96,
       child: ActionTile(
         icon: icon,
-        iconWidget: iconWidget,
+        iconWidget: hugeIcon == null
+            ? iconWidget
+            : HugeIcon(icon: hugeIcon, size: 22, color: AppColors.textPrimary),
         label: label,
         onTap: onTap,
         iconBackgroundColor: AppColors.surfaceTertiary,
         iconColor: AppColors.textPrimary,
         showIconBackground: false,
+        elevated: true,
         iconContainerSize: 36,
         iconSize: 22,
         vertical: true,
@@ -1353,29 +1883,69 @@ class _QuickAddTile extends StatelessWidget {
   }
 }
 
-class _AddMoreTile extends StatelessWidget {
-  const _AddMoreTile({required this.enabled, required this.onTap});
+class _AddMoreRow extends StatelessWidget {
+  const _AddMoreRow({
+    required this.enabled,
+    required this.onTap,
+    required this.dragging,
+    required this.animation,
+  });
 
   final bool enabled;
   final VoidCallback onTap;
+  final bool dragging;
+  final Animation<double> animation;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 96,
-      child: ActionTile(
-        icon: Icons.add_rounded,
-        label: null,
-        onTap: enabled ? onTap : null,
-        selected: false,
-        iconBackgroundColor: AppColors.surfaceTertiary,
-        iconColor: AppColors.textPrimary,
-        showIconBackground: false,
-        iconContainerSize: 36,
-        iconSize: 22,
-        vertical: true,
-        showBorder: true,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      height: 52,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: enabled ? onTap : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceTertiary.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Row(
+                    children: [
+                      HugeIcon(
+                        icon: HugeIcons.strokeRoundedAdd01,
+                        size: 21,
+                        color: AppColors.primary,
+                      ),
+                      SizedBox(width: 10),
+                      Text('Add more files'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (dragging)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: animation,
+                  builder: (context, _) => CustomPaint(
+                    painter: _MovingDashedBorderPainter(
+                      progress: animation.value,
+                      color: AppColors.primary,
+                      radius: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

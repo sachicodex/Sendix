@@ -19,9 +19,10 @@ import 'package:sendix/ui/send_page.dart';
 import 'package:sendix/ui/splash_screen.dart';
 import 'package:sendix/ui/theme/colors.dart';
 import 'package:sendix/ui/theme/text_styles.dart';
-import 'package:sendix/ui/widgets/action_tile.dart';
 import 'package:sendix/ui/widgets/svg_icon.dart';
+import 'package:sendix/ui/widgets/transfer_progress_tile.dart';
 import 'package:sendix/ui/widgets/transfer_speed_tracker.dart';
+import 'package:sendix/widgets/Glass Card/glass_carrd.dart';
 import 'package:window_manager/window_manager.dart';
 
 class HomePage extends StatefulWidget {
@@ -162,7 +163,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _DeviceNameDialog(onSubmit: identity.setName),
+      builder: (_) => _DeviceNameDialog(
+        onSubmit: (name) async {
+          await identity.setName(name);
+          if (mounted) setState(() {});
+        },
+      ),
     );
   }
 
@@ -322,13 +328,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           required String label,
           required String value,
         }) {
-          return Container(
+          return GlassCard(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceTertiary.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.surfaceSecondary),
-            ),
+            borderRadius: BorderRadius.circular(16),
+            tintColor: AppColors.surfaceTertiary,
+            tintOpacity: 0.9,
+            borderColor: AppColors.surfaceSecondary,
+            borderOpacity: 0.9,
             child: Row(
               children: [
                 Icon(icon, size: 18, color: AppColors.primaryAccent),
@@ -361,14 +367,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         }
 
         Widget sectionBox({required String title, required Widget child}) {
-          return Container(
+          return GlassCard(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceTertiary.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.surfaceSecondary),
-            ),
+            borderRadius: BorderRadius.circular(18),
+            tintColor: AppColors.surfaceTertiary,
+            tintOpacity: 0.55,
+            borderColor: AppColors.surfaceSecondary,
+            borderOpacity: 0.9,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -394,19 +400,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 620),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: AppColors.surfaceSecondary),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black87,
-                    blurRadius: 30,
-                    offset: Offset(0, 16),
-                  ),
-                ],
-              ),
+            child: GlassCard(
+              padding: EdgeInsets.zero,
+              borderRadius: BorderRadius.circular(28),
+              tintColor: AppColors.surface,
+              tintOpacity: 0.96,
+              borderColor: AppColors.surfaceSecondary,
+              borderOpacity: 0.95,
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black87,
+                  blurRadius: 30,
+                  offset: Offset(0, 16),
+                ),
+              ],
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -671,33 +678,36 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     ),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 560),
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(18),
-                          child: _SendTransferOverlayCard(
-                            progress: latest,
-                            control: control,
-                            isWaiting: isWaiting,
-                            speedBytesPerSecond: speed,
-                            onPauseResume: control == null
-                                ? null
-                                : () {
-                                    if (control.paused.value) {
-                                      widget.sendController.resumeTransfer(
-                                        latest.transferId,
-                                      );
-                                    } else {
-                                      widget.sendController.pauseTransfer(
-                                        latest.transferId,
-                                      );
-                                    }
-                                  },
-                            onCancel: control == null
-                                ? null
-                                : () => widget.sendController.cancelTransfer(
-                                    latest.transferId,
-                                  ),
-                          ),
+                      child: GlassCard(
+                        padding: const EdgeInsets.all(18),
+                        tintColor: AppColors.surfaceTertiary,
+                        tintOpacity: 0.52,
+                        borderColor: AppColors.borderFocus,
+                        borderOpacity: 0.72,
+                        blurSigma: 20,
+                        child: _SendTransferOverlayCard(
+                          progress: latest,
+                          control: control,
+                          isWaiting: isWaiting,
+                          speedBytesPerSecond: speed,
+                          onPauseResume: control == null
+                              ? null
+                              : () {
+                                  if (control.paused.value) {
+                                    widget.sendController.resumeTransfer(
+                                      latest.transferId,
+                                    );
+                                  } else {
+                                    widget.sendController.pauseTransfer(
+                                      latest.transferId,
+                                    );
+                                  }
+                                },
+                          onCancel: control == null
+                              ? null
+                              : () => widget.sendController.cancelTransfer(
+                                  latest.transferId,
+                                ),
                         ),
                       ),
                     ),
@@ -801,6 +811,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
             ReceivePage(
               controller: widget.receiveController,
+              outgoingTransfers: widget.sendController.transfers,
+              outgoingStartTimeFor: widget.sendController.startTimeFor,
               desktopLayout: true,
             ),
             SettingsPage(
@@ -821,16 +833,67 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             final selected = safeIndex == index;
             final iconColor = selected ? navSelected : navUnselected;
             return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: ActionTile(
-                icon: icon,
-                iconWidget: iconWidget,
-                iconColor: iconWidget == null ? iconColor : null,
-                label: label,
-                labelColor: selected ? navSelected : navUnselected,
-                selected: false,
-                showIconBackground: false,
-                onTap: () => _handleNavigation(index),
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(17),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(17),
+                  onTap: () => _handleNavigation(index),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    height: 60,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? AppColors.secondary.withValues(alpha: 0.16)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(17),
+                      border: Border.all(
+                        color: selected
+                            ? AppColors.secondary.withValues(alpha: 0.35)
+                            : Colors.transparent,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 26,
+                          height: 26,
+                          child: Center(
+                            child:
+                                iconWidget ??
+                                Icon(icon, size: 22, color: iconColor),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            label,
+                            style: AppTextStyles.labelLarge.copyWith(
+                              color: selected
+                                  ? AppColors.onBg
+                                  : AppColors.onTertiary,
+                              fontSize: 15,
+                              fontWeight: selected
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        if (selected)
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             );
           }
@@ -847,14 +910,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         SafeArea(
                           top: !windowsDesktop,
                           child: Container(
-                            width: 260,
+                            width: 284,
                             margin: const EdgeInsets.only(right: 12),
                             decoration: BoxDecoration(
                               color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: AppColors.surfaceSecondary,
-                              ),
+                              borderRadius: BorderRadius.circular(28),
+                              border: Border.all(color: AppColors.borderFocus),
                               boxShadow: const [
                                 BoxShadow(
                                   color: Colors.black54,
@@ -864,20 +925,29 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                               ],
                             ),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(28),
                               child: Padding(
                                 padding: const EdgeInsets.fromLTRB(
-                                  18,
                                   20,
-                                  18,
-                                  18,
+                                  26,
+                                  20,
+                                  20,
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        8,
+                                        0,
+                                        8,
+                                        10,
+                                      ),
+                                    ),
+
                                     Expanded(
                                       child: ListView(
-                                        padding: const EdgeInsets.only(top: 6),
+                                        padding: EdgeInsets.zero,
                                         children: [
                                           navItem(
                                             index: 0,
@@ -899,7 +969,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                   ? navSelected
                                                   : navUnselected,
                                             ),
-                                            label: 'Receive',
+                                            label: 'Activity',
                                           ),
                                           navItem(
                                             index: 2,
@@ -911,6 +981,65 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                   : navUnselected,
                                             ),
                                             label: 'Settings',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 13,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceTertiary,
+                                        borderRadius: BorderRadius.circular(19),
+                                        border: Border.all(
+                                          color: AppColors.border,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const HugeIcon(
+                                            icon:
+                                                HugeIcons.strokeRoundedWatch01,
+                                            color: AppColors.primary,
+                                            size: 24,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  widget
+                                                      .sendController
+                                                      .identity
+                                                      .name,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: AppTextStyles
+                                                      .labelLarge
+                                                      .copyWith(
+                                                        color: AppColors.onBg,
+                                                        fontSize: 15,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                ),
+                                                const SizedBox(height: 3),
+                                                Text(
+                                                  'Ready to share',
+                                                  style: AppTextStyles.bodySmall
+                                                      .copyWith(
+                                                        color:
+                                                            AppColors.onSurface,
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -994,6 +1123,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ),
                   ReceivePage(
                     controller: widget.receiveController,
+                    outgoingTransfers: widget.sendController.transfers,
+                    outgoingStartTimeFor: widget.sendController.startTimeFor,
                     desktopLayout: false,
                   ),
                   SettingsPage(
@@ -1179,12 +1310,19 @@ class _SendTransferOverlayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final paused = control?.paused.value ?? false;
-    final statusColor = isWaiting
+    final completed = progress.status == TransferStatus.completed;
+    final statusColor = completed
+        ? AppColors.success
+        : isWaiting
         ? AppColors.textPrimary
         : paused
         ? AppColors.textSecondary
         : AppColors.success;
-    final statusLabel = isWaiting
+    final statusLabel = completed
+        ? (progress.direction == TransferDirection.send
+              ? 'Transfer complete'
+              : 'Receive complete')
+        : isWaiting
         ? 'Pending approval'
         : paused
         ? 'Paused'
@@ -1193,7 +1331,9 @@ class _SendTransferOverlayCard extends StatelessWidget {
     final speedText = speedBytesPerSecond == null || speedBytesPerSecond! <= 0
         ? 'Waiting'
         : '${_formatBytes(speedBytesPerSecond!.round())}/s';
-    final actionLabel = isWaiting
+    final actionLabel = completed
+        ? ''
+        : isWaiting
         ? 'You can cancel while waiting.'
         : paused
         ? 'Tap resume to continue.'
@@ -1204,13 +1344,13 @@ class _SendTransferOverlayCard extends StatelessWidget {
       required String label,
       required String value,
     }) {
-      return Container(
+      return GlassCard(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceTertiary.withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.surfaceSecondary),
-        ),
+        borderRadius: BorderRadius.circular(14),
+        tintColor: AppColors.surfaceTertiary,
+        tintOpacity: 0.85,
+        borderColor: AppColors.surfaceSecondary,
+        borderOpacity: 0.9,
         child: Row(
           children: [
             Icon(icon, size: 18, color: AppColors.textSecondary),
@@ -1288,49 +1428,48 @@ class _SendTransferOverlayCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            minHeight: 4,
-            value: isWaiting ? null : progress.progress.clamp(0.0, 1.0),
-            backgroundColor: AppColors.surfaceTertiary,
-            valueColor: const AlwaysStoppedAnimation<Color>(
-              AppColors.primaryAccent,
+        SendixProgressBar(
+          value: isWaiting
+              ? 0
+              : completed
+              ? 1
+              : progress.progress.clamp(0.0, 1.0),
+          active: !isWaiting && !paused && !completed,
+        ),
+        if (!completed) ...[
+          const SizedBox(height: 12),
+          Text(
+            actionLabel,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          actionLabel,
-          textAlign: TextAlign.center,
-          style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            if (onPauseResume != null && !isWaiting) ...[
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: onPauseResume,
-                  icon: Icon(
-                    paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              if (onPauseResume != null && !isWaiting) ...[
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: onPauseResume,
+                    icon: Icon(
+                      paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                    ),
+                    label: Text(paused ? 'Resume' : 'Pause'),
                   ),
-                  label: Text(paused ? 'Resume' : 'Pause'),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onCancel,
+                  icon: const Icon(Icons.close_rounded),
+                  label: const Text('Cancel'),
                 ),
               ),
-              const SizedBox(width: 12),
             ],
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: onCancel,
-                icon: const Icon(Icons.close_rounded),
-                label: const Text('Cancel'),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ],
     );
   }

@@ -9,6 +9,7 @@ import 'package:sendix/ui/theme/colors.dart';
 import 'package:sendix/ui/theme/text_styles.dart';
 import 'package:sendix/ui/widgets/section_card.dart';
 import 'package:sendix/ui/widgets/svg_icon.dart';
+import 'package:sendix/widgets/Glass Card/glass_carrd.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
@@ -363,13 +364,13 @@ class _AboutInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceTertiary.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.surfaceSecondary),
-      ),
+      borderRadius: BorderRadius.circular(18),
+      tintColor: AppColors.surfaceTertiary,
+      tintOpacity: 0.7,
+      borderColor: AppColors.surfaceSecondary,
+      borderOpacity: 0.9,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -30,8 +30,8 @@ ArchitecturesAllowed=x64compatible
 ; the 64-bit view of the registry.
 ArchitecturesInstallIn64BitMode=x64compatible
 DisableProgramGroupPage=yes
-; Remove the following line to run in administrative install mode (install for all users).
-PrivilegesRequired=lowest
+; Firewall rules for LAN discovery and transfers require an elevated install.
+PrivilegesRequired=admin
 OutputDir=F:\02 Soft Dev\Flutter Development\Sendix\installer\Output
 OutputBaseFilename=Sendix-Setup
 SetupIconFile=F:\02 Soft Dev\Flutter Development\Sendix\assets\Icon\Sendix.ico
@@ -54,5 +54,11 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""Sendix Transfer TCP"" dir=in action=allow protocol=TCP localport=53317 profile=private,public program=""{app}\{#MyAppExeName}"""; Flags: runhidden waituntilterminated skipifsilent
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""Sendix Discovery UDP"" dir=in action=allow protocol=UDP localport=53316 profile=private,public program=""{app}\{#MyAppExeName}"""; Flags: runhidden waituntilterminated skipifsilent
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+[UninstallRun]
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""Sendix Transfer TCP"""; Flags: runhidden waituntilterminated
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""Sendix Discovery UDP"""; Flags: runhidden waituntilterminated
 

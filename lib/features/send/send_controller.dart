@@ -36,8 +36,11 @@ class SendController {
   Stream<List<DeviceInfo>> get devices => _discovery.devices;
 
   final Map<String, TransferControl> _controls = {};
+  final Map<String, DateTime> _startTimes = {};
 
   TransferControl? controlFor(String transferId) => _controls[transferId];
+
+  DateTime? startTimeFor(String transferId) => _startTimes[transferId];
 
   void pauseTransfer(String transferId) =>
       _controls[transferId]?.pauseTransfer();
@@ -65,6 +68,7 @@ class SendController {
       await c.dispose();
     }
     _controls.clear();
+    _startTimes.clear();
     transfers.dispose();
     await _discovery.stop();
   }
@@ -98,6 +102,7 @@ class SendController {
   }
 
   void _updateProgress(TransferProgress progress) {
+    _startTimes.putIfAbsent(progress.transferId, DateTime.now);
     final current = List<TransferProgress>.from(transfers.value);
     final index = current.indexWhere(
       (item) => item.transferId == progress.transferId,

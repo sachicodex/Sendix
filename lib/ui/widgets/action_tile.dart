@@ -18,6 +18,7 @@ class ActionTile extends StatelessWidget {
     this.vertical = false,
     this.showBorder = false,
     this.showIconBackground = true,
+    this.elevated = false,
     this.padding,
     this.labelColor,
     this.selectedBackgroundColor,
@@ -37,6 +38,7 @@ class ActionTile extends StatelessWidget {
   final bool vertical;
   final bool showBorder;
   final bool showIconBackground;
+  final bool elevated;
   final EdgeInsetsGeometry? padding;
   final Color? labelColor;
   final Color? selectedBackgroundColor;
@@ -55,7 +57,11 @@ class ActionTile extends StatelessWidget {
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(16),
       side: showBorder
-          ? BorderSide(color: AppColors.surfaceTertiary)
+          ? BorderSide(
+              color: elevated
+                  ? AppColors.borderFocus.withValues(alpha: 0.9)
+                  : AppColors.surfaceTertiary,
+            )
           : BorderSide.none,
     );
     final contentPadding =
@@ -67,11 +73,40 @@ class ActionTile extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       shape: shape,
+      elevation: elevated ? 4 : 0,
+      shadowColor: Colors.black.withValues(alpha: 0.5),
       clipBehavior: Clip.antiAlias,
       child: Ink(
         decoration: BoxDecoration(
           color: AppColors.surfaceTertiary,
+          gradient: elevated
+              ? LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.05),
+                    AppColors.surfaceTertiary.withValues(alpha: 0.95),
+                    AppColors.surfaceTertiary.withValues(alpha: 0.84),
+                  ],
+                  stops: const [0, 0.12, 1],
+                )
+              : null,
           borderRadius: BorderRadius.circular(16),
+          border: null,
+          boxShadow: elevated
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                  BoxShadow(
+                    color: Colors.white.withValues(alpha: 0.035),
+                    blurRadius: 1,
+                    offset: const Offset(0, -1),
+                  ),
+                ]
+              : null,
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),

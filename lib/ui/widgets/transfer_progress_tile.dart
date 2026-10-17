@@ -8,7 +8,7 @@ class TransferProgressTile extends StatelessWidget {
     super.key,
     required this.progress,
     required this.speedBytesPerSecond,
-    this.showDirectionIcon = true,
+    this.showDirectionIcon = false,
     this.isPaused = false,
     this.onPauseResume,
     this.onCancel,
@@ -28,10 +28,7 @@ class TransferProgressTile extends StatelessWidget {
     final rawValue = progress.status == TransferStatus.completed
         ? 1.0
         : progress.progress.clamp(0.0, 1.0);
-    final value =
-        (rawValue == 0 && progress.status == TransferStatus.inProgress)
-        ? 0.02
-        : rawValue;
+    final value = rawValue;
     final percent = (value * 100).clamp(0, 100).toStringAsFixed(0);
 
     final speed = speedBytesPerSecond;
@@ -39,13 +36,30 @@ class TransferProgressTile extends StatelessWidget {
         ? '—'
         : '${_formatBytes(speed)}/s';
 
-    final trailingText = isPaused
+    final remaining = speed != null && speed > 0 && progress.progress < 1
+        ? _formatDuration(
+            ((progress.totalBytes - progress.transferredBytes) / speed).ceil(),
+          )
+        : null;
+    final statusText = isPaused
         ? 'Paused'
         : switch (progress.status) {
             TransferStatus.pending => 'Starting…',
-            TransferStatus.inProgress => '$speedText • $percent%',
-            TransferStatus.completed => 'Done',
-            TransferStatus.failed => 'Failed',
+            TransferStatus.inProgress =>
+              [
+                    if (remaining != null) '$remaining remaining',
+                    if (speed != null && speed > 0) speedText,
+                  ].join(' • ').isEmpty
+                  ? 'Transferring'
+                  : [
+                      if (remaining != null) '$remaining remaining',
+                      if (speed != null && speed > 0) speedText,
+                    ].join(' • '),
+            TransferStatus.completed =>
+              progress.direction == TransferDirection.send
+                  ? 'Transfer complete'
+                  : 'Receive complete',
+            TransferStatus.failed => 'Transfer failed',
             TransferStatus.cancelled => 'Cancelled',
           };
 
@@ -98,31 +112,49 @@ class TransferProgressTile extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        _AnimatedProgressBar(value: value),
+        SendixProgressBar(
+          value: value,
+          active: progress.status == TransferStatus.pending || isActive,
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
-            Expanded(
-              child: Text(
-                transferredText,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+            Text(
+              '$percent%',
+              style: AppTextStyles.titleMedium.copyWith(
+                color: progress.status == TransferStatus.failed
+                    ? AppColors.danger
+                    : AppColors.primary,
+                fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(width: 12),
-            Text(
-              trailingText,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+            const Spacer(),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  statusText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
               ),
             ),
           ],
         ),
+        const SizedBox(height: 4),
+        if (progress.status != TransferStatus.completed)
+          Text(
+            transferredText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
         if (progress.error case final e?) ...[
           const SizedBox(height: 8),
           Text(
@@ -145,12 +177,58 @@ class TransferProgressTile extends StatelessWidget {
     final digits = unit == 0 ? 0 : (value < 10 ? 1 : 0);
     return '${value.toStringAsFixed(digits)} ${units[unit]}';
   }
+
+  static String _formatDuration(int seconds) {
+    if (seconds < 60) return '${seconds}s';
+    final minutes = seconds ~/ 60;
+    final remainder = seconds % 60;
+    if (minutes < 60) return '${minutes}m ${remainder}s';
+    return '${minutes ~/ 60}h ${minutes % 60}m';
+  }
 }
 
-class _AnimatedProgressBar extends StatelessWidget {
-  const _AnimatedProgressBar({required this.value});
+class SendixProgressBar extends StatefulWidget {
+  const SendixProgressBar({
+    super.key,
+    required this.value,
+    required this.active,
+  });
 
   final double value;
+  final bool active;
+
+  @override
+  State<SendixProgressBar> createState() => _AnimatedProgressBarState();
+}
+
+class _AnimatedProgressBarState extends State<SendixProgressBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shimmer = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.active) _shimmer.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant SendixProgressBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      _shimmer.repeat();
+    } else if (!widget.active && oldWidget.active) {
+      _shimmer.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _shimmer.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,20 +244,57 @@ class _AnimatedProgressBar extends StatelessWidget {
           decoration: BoxDecoration(color: trackColor),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final targetWidth = (constraints.maxWidth * value.clamp(0.0, 1.0))
-                  .clamp(0.0, constraints.maxWidth);
-              return Align(
-                alignment: Alignment.centerLeft,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 380),
-                  curve: Curves.easeOutCubic,
-                  width: targetWidth,
-                  height: barHeight,
-                  decoration: BoxDecoration(
-                    color: baseColor,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
+              return TweenAnimationBuilder<double>(
+                tween: Tween<double>(end: widget.value.clamp(0.0, 1.0)),
+                duration: const Duration(milliseconds: 160),
+                curve: Curves.easeOutCubic,
+                builder: (context, animatedValue, _) {
+                  final targetWidth = constraints.maxWidth * animatedValue;
+                  final starting = widget.active && widget.value <= 0;
+                  final complete = widget.value >= 0.999;
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: AnimatedBuilder(
+                      animation: _shimmer,
+                      builder: (context, _) {
+                        final gradient = complete
+                            ? null
+                            : starting
+                            ? LinearGradient(
+                                begin: Alignment(-1 + _shimmer.value * 2, 0),
+                                end: Alignment(-0.5 + _shimmer.value * 2, 0),
+                                colors: [
+                                  baseColor.withValues(alpha: 0.35),
+                                  baseColor,
+                                  baseColor.withValues(alpha: 0.35),
+                                ],
+                              )
+                            : LinearGradient(
+                                begin: Alignment(-1 + _shimmer.value * 2, 0),
+                                end: Alignment(-0.45 + _shimmer.value * 2, 0),
+                                colors: [
+                                  baseColor,
+                                  baseColor.withValues(alpha: 0.82),
+                                  AppColors.onTertiary.withValues(alpha: 0.42),
+                                  baseColor,
+                                ],
+                                stops: const [0, 0.42, 0.52, 1],
+                              );
+                        return Container(
+                          width: starting
+                              ? constraints.maxWidth * 0.035
+                              : targetWidth,
+                          height: barHeight,
+                          decoration: BoxDecoration(
+                            color: complete ? baseColor : null,
+                            gradient: gradient,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
               );
             },
           ),

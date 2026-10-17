@@ -30,7 +30,7 @@ class AppColors {
   static const Color textTertiary = onTertiary;
   static const Color primaryAccent = primary;
   static const Color danger = error;
-  static const Color surfaceSecondary =  Color(0xFF1E1E1E);
+  static const Color surfaceSecondary = Color(0xFF1E1E1E);
   static const Color surfaceTertiary = Color(0xFF1E1E1E);
   static const Color appBar = surface;
 }

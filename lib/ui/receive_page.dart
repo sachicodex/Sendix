@@ -12,15 +12,20 @@ import 'package:sendix/ui/theme/text_styles.dart';
 import 'package:sendix/ui/widgets/empty_state.dart';
 import 'package:sendix/ui/widgets/transfer_progress_tile.dart';
 import 'package:sendix/ui/widgets/transfer_speed_tracker.dart';
+import 'package:sendix/widgets/Glass Card/glass_carrd.dart';
 
 class ReceivePage extends StatefulWidget {
   const ReceivePage({
     super.key,
     required this.controller,
+    this.outgoingTransfers,
+    this.outgoingStartTimeFor,
     this.desktopLayout = false,
   });
 
   final ReceiveController controller;
+  final ValueListenable<List<TransferProgress>>? outgoingTransfers;
+  final DateTime? Function(String transferId)? outgoingStartTimeFor;
   final bool desktopLayout;
 
   @override
@@ -169,21 +174,21 @@ class _ReceivePageState extends State<ReceivePage> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<List<TransferProgress>>(
-      valueListenable: widget.controller.transfers,
-      builder: (context, transfers, _) {
+    final listenables = <Listenable>[widget.controller.transfers];
+    if (widget.outgoingTransfers != null) {
+      listenables.add(widget.outgoingTransfers!);
+    }
+    return ListenableBuilder(
+      listenable: Listenable.merge(listenables),
+      builder: (context, _) {
+        final transfers = [
+          ...widget.controller.transfers.value,
+          ...?widget.outgoingTransfers?.value,
+        ];
         final ordered = List<TransferProgress>.from(transfers)
           ..sort((a, b) {
-            final aStart =
-                widget.controller
-                    .startTimeFor(a.transferId)
-                    ?.millisecondsSinceEpoch ??
-                0;
-            final bStart =
-                widget.controller
-                    .startTimeFor(b.transferId)
-                    ?.millisecondsSinceEpoch ??
-                0;
+            final aStart = _startTimeFor(a)?.millisecondsSinceEpoch ?? 0;
+            final bStart = _startTimeFor(b)?.millisecondsSinceEpoch ?? 0;
             if (aStart != bStart) return bStart.compareTo(aStart);
             return a.transferId.compareTo(b.transferId);
           });
@@ -232,51 +237,53 @@ class _ReceivePageState extends State<ReceivePage> {
         Widget transferCard(TransferProgress progress) {
           final c = widget.controller.controlFor(progress.transferId);
 
-          return Card(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(20),
-              onTap: () => _showTransferMenu(progress),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                child: c == null
-                    ? TransferProgressTile(
-                        progress: progress,
-                        speedBytesPerSecond: _speedTracker.update(progress),
-                        showDirectionIcon: !_isMobileLayout(context),
-                        isPaused: false,
-                      )
-                    : ValueListenableBuilder<bool>(
-                        valueListenable: c.paused,
-                        builder: (context, paused, _) {
-                          return TransferProgressTile(
-                            progress: progress,
-                            speedBytesPerSecond: _speedTracker.update(progress),
-                            showDirectionIcon: !_isMobileLayout(context),
-                            isPaused: paused,
-                            onPauseResume:
-                                progress.status == TransferStatus.inProgress
-                                ? () {
-                                    if (c.paused.value) {
-                                      widget.controller.resumeTransfer(
-                                        progress.transferId,
-                                      );
-                                    } else {
-                                      widget.controller.pauseTransfer(
-                                        progress.transferId,
-                                      );
-                                    }
+          return GlassCard(
+            padding: EdgeInsets.zero,
+            tintColor: AppColors.surfaceTertiary,
+            tintOpacity: 0.52,
+            borderColor: AppColors.borderFocus,
+            borderOpacity: 0.72,
+            blurSigma: 20,
+            onTap: () => _showTransferMenu(progress),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              child: c == null
+                  ? TransferProgressTile(
+                      progress: progress,
+                      speedBytesPerSecond: _speedTracker.update(progress),
+                      showDirectionIcon: !_isMobileLayout(context),
+                      isPaused: false,
+                    )
+                  : ValueListenableBuilder<bool>(
+                      valueListenable: c.paused,
+                      builder: (context, paused, _) {
+                        return TransferProgressTile(
+                          progress: progress,
+                          speedBytesPerSecond: _speedTracker.update(progress),
+                          showDirectionIcon: !_isMobileLayout(context),
+                          isPaused: paused,
+                          onPauseResume:
+                              progress.status == TransferStatus.inProgress
+                              ? () {
+                                  if (c.paused.value) {
+                                    widget.controller.resumeTransfer(
+                                      progress.transferId,
+                                    );
+                                  } else {
+                                    widget.controller.pauseTransfer(
+                                      progress.transferId,
+                                    );
                                   }
-                                : null,
-                            onCancel:
-                                progress.status == TransferStatus.inProgress
-                                ? () => widget.controller.cancelTransfer(
-                                    progress.transferId,
-                                  )
-                                : null,
-                          );
-                        },
-                      ),
-              ),
+                                }
+                              : null,
+                          onCancel: progress.status == TransferStatus.inProgress
+                              ? () => widget.controller.cancelTransfer(
+                                  progress.transferId,
+                                )
+                              : null,
+                        );
+                      },
+                    ),
             ),
           );
         }
@@ -298,5 +305,12 @@ class _ReceivePageState extends State<ReceivePage> {
         );
       },
     );
+  }
+
+  DateTime? _startTimeFor(TransferProgress progress) {
+    if (progress.direction == TransferDirection.receive) {
+      return widget.controller.startTimeFor(progress.transferId);
+    }
+    return widget.outgoingStartTimeFor?.call(progress.transferId);
   }
 }

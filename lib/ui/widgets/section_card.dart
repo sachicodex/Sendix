@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sendix/ui/theme/colors.dart';
 import 'package:sendix/ui/theme/text_styles.dart';
-import 'package:sendix/ui/widgets/themed_card.dart';
+import 'package:sendix/widgets/Glass Card/glass_carrd.dart';
 
 class SectionCard extends StatelessWidget {
   const SectionCard({
@@ -10,6 +10,7 @@ class SectionCard extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.subtitleTrailing,
+    this.centerTitle = false,
     required this.child,
   });
 
@@ -17,6 +18,7 @@ class SectionCard extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
   final Widget? subtitleTrailing;
+  final bool centerTitle;
   final Widget child;
 
   @override
@@ -32,7 +34,17 @@ class SectionCard extends StatelessWidget {
       trailingChildren.add(subtitleTrailing!);
     }
 
-    return SecondaryCard(
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      borderRadius: const BorderRadius.all(Radius.circular(20)),
+      tintColor: AppColors.surfaceTertiary,
+      tintOpacity: 0.52,
+      borderColor: AppColors.borderFocus,
+      borderOpacity: 0.72,
+      blurSigma: 20,
+      boxShadow: const [
+        BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 8)),
+      ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -41,10 +53,15 @@ class SectionCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: centerTitle
+                      ? CrossAxisAlignment.center
+                      : CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
+                      textAlign: centerTitle
+                          ? TextAlign.center
+                          : TextAlign.start,
                       style: AppTextStyles.titleMedium.copyWith(
                         height: 1.1,
                         color: AppColors.primary,
@@ -54,6 +71,9 @@ class SectionCard extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         s,
+                        textAlign: centerTitle
+                            ? TextAlign.center
+                            : TextAlign.start,
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                           height: 1.1,

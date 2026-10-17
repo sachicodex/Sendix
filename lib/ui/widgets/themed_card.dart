@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sendix/ui/theme/app_card_theme.dart';
+import 'package:sendix/ui/theme/colors.dart';
+import 'package:sendix/widgets/Glass Card/glass_carrd.dart';
 
 class SecondaryCard extends StatelessWidget {
   const SecondaryCard({
@@ -21,13 +23,18 @@ class SecondaryCard extends StatelessWidget {
     final effectivePadding = padding ?? theme.padding;
     final effectiveRadius = radius ?? theme.radius;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.surface,
-        borderRadius: effectiveRadius,
-        border: showBorder ? Border.all(color: theme.borderColor) : null,
-      ),
-      child: Padding(padding: effectivePadding, child: child),
+    return GlassCard(
+      padding: effectivePadding,
+      borderRadius: effectiveRadius,
+      tintColor: AppColors.surfaceTertiary,
+      tintOpacity: 0.52,
+      borderColor: showBorder ? AppColors.borderFocus : Colors.transparent,
+      borderOpacity: showBorder ? 0.72 : 0,
+      blurSigma: 20,
+      boxShadow: const [
+        BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 8)),
+      ],
+      child: child,
     );
   }
 }
