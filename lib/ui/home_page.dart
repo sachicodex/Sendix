@@ -836,22 +836,31 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               padding: const EdgeInsets.only(bottom: 8),
               child: Material(
                 color: Colors.transparent,
-                borderRadius: BorderRadius.circular(17),
+                borderRadius: BorderRadius.circular(20),
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(17),
+                  borderRadius: BorderRadius.circular(20),
                   onTap: () => _handleNavigation(index),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 160),
-                    height: 60,
+                    height: 59,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
-                      color: selected
-                          ? AppColors.secondary.withValues(alpha: 0.16)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(17),
+                      gradient: selected
+                          ? const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF18380F),
+                                Color(0xFF132512),
+                                Color(0xFF203B10),
+                              ],
+                            )
+                          : null,
+                      color: selected ? null : Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: selected
-                            ? AppColors.secondary.withValues(alpha: 0.35)
+                            ? AppColors.primary.withValues(alpha: 0.95)
                             : Colors.transparent,
                       ),
                     ),
@@ -874,7 +883,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                               color: selected
                                   ? AppColors.onBg
                                   : AppColors.onTertiary,
-                              fontSize: 15,
+                              fontSize: 13,
                               fontWeight: selected
                                   ? FontWeight.w600
                                   : FontWeight.w500,
@@ -882,13 +891,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           ),
                         ),
                         if (selected)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: AppColors.primary,
-                              shape: BoxShape.circle,
-                            ),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: AppColors.primary,
+                            size: 24,
                           ),
                       ],
                     ),
@@ -899,142 +905,227 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           }
 
           final shell = Scaffold(
-            body: Column(
+            backgroundColor: const Color(0xFF070C10),
+            body: Stack(
               children: [
-                if (windowsDesktop) const _WindowsTitleBar(),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                    child: Row(
-                      children: [
-                        SafeArea(
-                          top: !windowsDesktop,
-                          child: Container(
-                            width: 284,
-                            margin: const EdgeInsets.only(right: 12),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(28),
-                              border: Border.all(color: AppColors.borderFocus),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Colors.black54,
-                                  blurRadius: 18,
-                                  offset: Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(28),
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  20,
-                                  26,
-                                  20,
-                                  20,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Padding(
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF070C10),
+                      gradient: RadialGradient(
+                        center: const Alignment(-0.9, -0.2),
+                        radius: 1.35,
+                        colors: [
+                          AppColors.tertiary.withValues(alpha: 0.26),
+                          const Color(0xFF07120F).withValues(alpha: 0.16),
+                          const Color(0xFF05090D).withValues(alpha: 0.0),
+                        ],
+                        stops: const [0.0, 0.38, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: const Alignment(0.72, 0.75),
+                        radius: 1.15,
+                        colors: [
+                          const Color(0xFF0E3524).withValues(alpha: 0.12),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: const Alignment(0.86, -0.88),
+                        radius: 0.95,
+                        colors: [
+                          const Color(0xFF24604D).withValues(alpha: 0.18),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Column(
+                  children: [
+                    if (windowsDesktop) const _WindowsTitleBar(),
+                    Expanded(
+                      child: ClipRect(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                          child: Row(
+                            children: [
+                              SafeArea(
+                                top: !windowsDesktop,
+                                child: GlassCard(
+                                  width: (constraints.maxWidth * 0.25).clamp(
+                                    250.0,
+                                    408.0,
+                                  ),
+                                  margin: const EdgeInsets.only(right: 14),
+                                  padding: EdgeInsets.zero,
+                                  borderRadius: BorderRadius.circular(30),
+                                  blurSigma: 28,
+                                  tintColor: Colors.white,
+                                  tintOpacity: 0.045,
+                                  borderColor: Colors.white,
+                                  borderOpacity: 0.12,
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Colors.black38,
+                                      blurRadius: 22,
+                                      offset: Offset(0, 10),
+                                    ),
+                                  ],
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(28),
+                                    child: Padding(
                                       padding: const EdgeInsets.fromLTRB(
-                                        8,
-                                        0,
-                                        8,
-                                        10,
+                                        14,
+                                        20,
+                                        14,
+                                        20,
                                       ),
-                                    ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                              8,
+                                              0,
+                                              8,
+                                              10,
+                                            ),
+                                          ),
 
-                                    Expanded(
-                                      child: ListView(
-                                        padding: EdgeInsets.zero,
-                                        children: [
-                                          navItem(
-                                            index: 0,
-                                            icon: Icons.send_rounded,
-                                            iconWidget: navSvg(
-                                              'assets/svg/send.svg',
-                                              safeIndex == 0
-                                                  ? navSelected
-                                                  : navUnselected,
-                                            ),
-                                            label: 'Send',
-                                          ),
-                                          navItem(
-                                            index: 1,
-                                            icon: Icons.home,
-                                            iconWidget: navSvg(
-                                              'assets/svg/receive.svg',
-                                              safeIndex == 1
-                                                  ? navSelected
-                                                  : navUnselected,
-                                            ),
-                                            label: 'Activity',
-                                          ),
-                                          navItem(
-                                            index: 2,
-                                            icon: Icons.settings_outlined,
-                                            iconWidget: navSvg(
-                                              'assets/svg/setting.svg',
-                                              safeIndex == 2
-                                                  ? navSelected
-                                                  : navUnselected,
-                                            ),
-                                            label: 'Settings',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 13,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surfaceTertiary,
-                                        borderRadius: BorderRadius.circular(19),
-                                        border: Border.all(
-                                          color: AppColors.border,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const HugeIcon(
-                                            icon: HugeIcons.strokeRoundedLaptop,
-                                            color: AppColors.primary,
-                                            size: 24,
-                                          ),
-                                          const SizedBox(width: 12),
                                           Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              mainAxisSize: MainAxisSize.min,
+                                            child: ListView(
+                                              padding: EdgeInsets.zero,
                                               children: [
-                                                Text(
-                                                  widget
-                                                      .sendController
-                                                      .identity
-                                                      .name,
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: AppTextStyles
-                                                      .labelLarge
-                                                      .copyWith(
-                                                        color: AppColors.onBg,
-                                                        fontSize: 15,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                      ),
+                                                navItem(
+                                                  index: 0,
+                                                  icon: Icons.send_rounded,
+                                                  iconWidget: navSvg(
+                                                    'assets/svg/send.svg',
+                                                    safeIndex == 0
+                                                        ? navSelected
+                                                        : navUnselected,
+                                                  ),
+                                                  label: 'Send',
                                                 ),
-                                                const SizedBox(height: 3),
-                                                Text(
-                                                  'Ready to share',
-                                                  style: AppTextStyles.bodySmall
-                                                      .copyWith(
+                                                navItem(
+                                                  index: 1,
+                                                  icon: Icons.home,
+                                                  iconWidget: navSvg(
+                                                    'assets/svg/receive.svg',
+                                                    safeIndex == 1
+                                                        ? navSelected
+                                                        : navUnselected,
+                                                  ),
+                                                  label: 'Activity',
+                                                ),
+                                                navItem(
+                                                  index: 2,
+                                                  icon: Icons.settings_outlined,
+                                                  iconWidget: navSvg(
+                                                    'assets/svg/setting.svg',
+                                                    safeIndex == 2
+                                                        ? navSelected
+                                                        : navUnselected,
+                                                  ),
+                                                  label: 'Settings',
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          GlassCard(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 13,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              24,
+                                            ),
+                                            blurSigma: 20,
+                                            tintColor: Colors.white,
+                                            tintOpacity: 0.055,
+                                            borderColor: Colors.white,
+                                            borderOpacity: 0.16,
+                                            boxShadow: const [],
+                                            child: Row(
+                                              children: [
+                                                const HugeIcon(
+                                                  icon: HugeIcons
+                                                      .strokeRoundedLaptop,
+                                                  color: AppColors.primary,
+                                                  size: 24,
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Text(
+                                                        widget
+                                                            .sendController
+                                                            .identity
+                                                            .name,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: AppTextStyles
+                                                            .labelLarge
+                                                            .copyWith(
+                                                              color: AppColors
+                                                                  .onBg,
+                                                              fontSize: 13,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                            ),
+                                                      ),
+                                                      const SizedBox(height: 3),
+                                                      Text(
+                                                        'Ready to share',
+                                                        style: AppTextStyles
+                                                            .bodySmall
+                                                            .copyWith(
+                                                              color: AppColors
+                                                                  .onSurface,
+                                                            ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 10),
+                                                Container(
+                                                  width: 12,
+                                                  height: 12,
+                                                  decoration:
+                                                      const BoxDecoration(
                                                         color:
-                                                            AppColors.onSurface,
+                                                            AppColors.primary,
+                                                        shape: BoxShape.circle,
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: Color(
+                                                              0x6658FF00,
+                                                            ),
+                                                            blurRadius: 10,
+                                                          ),
+                                                        ],
                                                       ),
                                                 ),
                                               ],
@@ -1043,29 +1134,32 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                         ],
                                       ),
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: SafeArea(
-                            top: !windowsDesktop,
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 220),
-                              switchInCurve: Curves.easeOutCubic,
-                              switchOutCurve: Curves.easeInCubic,
-                              child: IndexedStack(
-                                index: safeIndex,
-                                children: pages,
+                              Expanded(
+                                child: SafeArea(
+                                  top: !windowsDesktop,
+                                  left: false,
+                                  right: false,
+                                  bottom: false,
+                                  child: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 220),
+                                    switchInCurve: Curves.easeOutCubic,
+                                    switchOutCurve: Curves.easeInCubic,
+                                    child: IndexedStack(
+                                      index: safeIndex,
+                                      children: pages,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -1481,60 +1575,35 @@ class _WindowsTitleBar extends StatefulWidget {
   State<_WindowsTitleBar> createState() => _WindowsTitleBarState();
 }
 
-class _WindowsTitleBarState extends State<_WindowsTitleBar>
-    with WindowListener {
-  bool _isMaximized = false;
-
-  @override
-  void initState() {
-    super.initState();
-    windowManager.addListener(this);
-    _syncMaximizedState();
-  }
-
-  @override
-  void dispose() {
-    windowManager.removeListener(this);
-    super.dispose();
-  }
-
-  @override
-  void onWindowMaximize() => _syncMaximizedState();
-
-  @override
-  void onWindowUnmaximize() => _syncMaximizedState();
-
-  Future<void> _syncMaximizedState() async {
-    final maximized = await windowManager.isMaximized();
-    if (mounted) setState(() => _isMaximized = maximized);
-  }
-
-  Future<void> _toggleMaximize() async {
-    if (_isMaximized) {
-      await windowManager.unmaximize();
-    } else {
-      await windowManager.maximize();
-    }
-    await _syncMaximizedState();
-  }
-
+class _WindowsTitleBarState extends State<_WindowsTitleBar> {
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 56,
-      padding: const EdgeInsets.fromLTRB(14, 7, 18, 5),
-      color: AppColors.background,
+      padding: const EdgeInsets.fromLTRB(12, 5, 18, 5),
+      decoration: const BoxDecoration(
+        color: Color(0xF20D1718),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x66000000),
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           Expanded(
             child: DragToMoveArea(
               child: Container(
-                height: 44,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                height: 46,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.surfaceSecondary),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF14201D), Color(0xFF0D1519)],
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: const Color(0xFF19252B)),
                   boxShadow: const [
                     BoxShadow(
                       color: Colors.black54,
@@ -1545,17 +1614,23 @@ class _WindowsTitleBarState extends State<_WindowsTitleBar>
                 ),
                 child: Row(
                   children: [
-                    Image.asset(
-                      'assets/Logo/Sendix.png',
-                      width: 20,
-                      height: 20,
+                    ColorFiltered(
+                      colorFilter: const ColorFilter.mode(
+                        AppColors.primary,
+                        BlendMode.srcIn,
+                      ),
+                      child: Image.asset(
+                        'assets/Logo/Sendix.png',
+                        width: 34,
+                        height: 34,
+                      ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Text(
                       'Sendix',
                       style: AppTextStyles.titleMedium.copyWith(
                         color: AppColors.textPrimary,
-                        fontSize: 18,
+                        fontSize: 20,
                         fontWeight: FontWeight.w600,
                         decoration: TextDecoration.none,
                       ),
@@ -1570,27 +1645,13 @@ class _WindowsTitleBarState extends State<_WindowsTitleBar>
             icon: Icons.remove_rounded,
             iconColor: AppColors.textTertiary,
             hoverIconColor: AppColors.textPrimary,
-            hoverColor: AppColors.surfaceSecondary.withValues(alpha: 0.92),
-            hoverBorderColor: AppColors.surfaceSecondary,
             onPressed: windowManager.minimize,
           ),
           const SizedBox(width: 8),
           _TitleWindowButton(
-            icon: _isMaximized
-                ? Icons.filter_none_rounded
-                : Icons.crop_square_rounded,
+            icon: Icons.close_rounded,
             iconColor: AppColors.textTertiary,
             hoverIconColor: AppColors.textPrimary,
-            hoverColor: AppColors.surfaceSecondary.withValues(alpha: 0.92),
-            hoverBorderColor: AppColors.surfaceSecondary,
-            onPressed: _toggleMaximize,
-          ),
-          const SizedBox(width: 8),
-          _TitleWindowButton(
-            icon: Icons.close_rounded,
-            backgroundColor: AppColors.danger.withValues(alpha: 0.1),
-            borderColor: const Color(0xFF32180F),
-            hoverColor: AppColors.danger.withValues(alpha: 0.3),
             onPressed: windowManager.close,
           ),
         ],
@@ -1603,20 +1664,12 @@ class _TitleWindowButton extends StatefulWidget {
   const _TitleWindowButton({
     required this.icon,
     required this.onPressed,
-    this.backgroundColor = AppColors.surface,
-    this.borderColor = AppColors.surfaceSecondary,
-    this.hoverColor = AppColors.surfaceSecondary,
-    this.hoverBorderColor,
     this.iconColor = AppColors.textTertiary,
     this.hoverIconColor = AppColors.textPrimary,
   });
 
   final IconData icon;
   final VoidCallback onPressed;
-  final Color backgroundColor;
-  final Color borderColor;
-  final Color hoverColor;
-  final Color? hoverBorderColor;
   final Color iconColor;
   final Color hoverIconColor;
 
@@ -1639,16 +1692,15 @@ class _TitleWindowButtonState extends State<_TitleWindowButton> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
           curve: Curves.easeOut,
-          width: 50,
-          height: 44,
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
-            color: _hovered ? widget.hoverColor : widget.backgroundColor,
-            borderRadius: BorderRadius.circular(15),
+            color: _hovered ? const Color(0xFF172426) : const Color(0xFF111B1B),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: _hovered
-                  ? widget.hoverBorderColor ??
-                        AppColors.textTertiary.withValues(alpha: 0.16)
-                  : widget.borderColor,
+                  ? AppColors.textTertiary.withValues(alpha: 0.16)
+                  : const Color(0xFF1B2A2B),
             ),
             boxShadow: _hovered
                 ? [
@@ -1677,7 +1729,7 @@ class _TitleWindowButtonState extends State<_TitleWindowButton> {
                   child: child!,
                 );
               },
-              child: Icon(widget.icon, size: 18),
+              child: Icon(widget.icon, size: 20),
             ),
           ),
         ),

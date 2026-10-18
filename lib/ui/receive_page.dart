@@ -236,10 +236,10 @@ class _ReceivePageState extends State<ReceivePage> {
 
           return GlassCard(
             padding: EdgeInsets.zero,
-            tintColor: AppColors.surfaceTertiary,
-            tintOpacity: 0.52,
-            borderColor: AppColors.borderFocus,
-            borderOpacity: 0.72,
+            tintColor: Colors.white,
+            tintOpacity: 0.045,
+            borderColor: Colors.white,
+            borderOpacity: 0.13,
             blurSigma: 20,
             onTap: () => _showTransferMenu(progress),
             child: Padding(
@@ -293,10 +293,10 @@ class _ReceivePageState extends State<ReceivePage> {
           children: [
             GlassCard(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-              tintColor: AppColors.surface,
-              tintOpacity: 0.78,
-              borderColor: AppColors.borderFocus,
-              borderOpacity: 0.82,
+              tintColor: Colors.white,
+              tintOpacity: 0.055,
+              borderColor: Colors.white,
+              borderOpacity: 0.14,
               blurSigma: 22,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

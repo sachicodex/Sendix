@@ -37,10 +37,10 @@ class SectionCard extends StatelessWidget {
     return GlassCard(
       padding: const EdgeInsets.all(16),
       borderRadius: const BorderRadius.all(Radius.circular(20)),
-      tintColor: AppColors.surfaceTertiary,
-      tintOpacity: 0.52,
-      borderColor: AppColors.borderFocus,
-      borderOpacity: 0.72,
+      tintColor: Colors.white,
+      tintOpacity: 0.05,
+      borderColor: Colors.white,
+      borderOpacity: 0.13,
       blurSigma: 20,
       boxShadow: const [
         BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 8)),
@@ -64,7 +64,7 @@ class SectionCard extends StatelessWidget {
                           : TextAlign.start,
                       style: AppTextStyles.titleMedium.copyWith(
                         height: 1.1,
-                        color: AppColors.primary,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     if (subtitle case final s?) ...[

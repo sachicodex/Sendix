@@ -1000,13 +1000,25 @@ if (\$icon -ne \$null) {
       );
     }
 
+    final desktopTiles = tiles
+        .map(
+          (tile) => _QuickAddTile(
+            icon: tile.icon,
+            iconWidget: tile.iconWidget,
+            label: tile.label,
+            onTap: tile.onTap,
+            desktop: widget.desktopLayout,
+          ),
+        )
+        .toList(growable: false);
     return SizedBox(
       width: double.infinity,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (var index = 0; index < tiles.length; index++) ...[
+          for (var index = 0; index < desktopTiles.length; index++) ...[
             if (index > 0) const SizedBox(width: 12),
-            Expanded(child: tiles[index]),
+            Expanded(child: desktopTiles[index]),
           ],
         ],
       ),
@@ -1049,10 +1061,11 @@ if (\$icon -ne \$null) {
               child: GlassCard(
                 width: sheetWidth,
                 padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
-                tintColor: AppColors.surface,
-                tintOpacity: 0.98,
-                borderColor: AppColors.borderFocus,
-                borderOpacity: 0.72,
+                tintColor: Colors.white,
+                tintOpacity: 0.07,
+                borderColor: Colors.white,
+                borderOpacity: 0.16,
+                blurSigma: 24,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1087,6 +1100,8 @@ if (\$icon -ne \$null) {
                                 icon: tiles[index].icon,
                                 iconWidget: tiles[index].iconWidget,
                                 label: tiles[index].label,
+                                desktop: true,
+                                compact: true,
                                 onTap: () {
                                   Navigator.of(sheetContext).pop();
                                   tiles[index].onTap();
@@ -1109,6 +1124,8 @@ if (\$icon -ne \$null) {
                                   icon: tile.icon,
                                   iconWidget: tile.iconWidget,
                                   label: tile.label,
+                                  desktop: true,
+                                  compact: true,
                                   onTap: () {
                                     Navigator.of(sheetContext).pop();
                                     tile.onTap();
@@ -1235,113 +1252,343 @@ if (\$icon -ne \$null) {
       );
     }
 
-    final card = SectionCard(
-      title: 'What to send',
-      subtitle: filesCount == 0
-          ? 'Start with files or text.'
-          : 'Ready to send.',
-      trailing: _InfoChip(label: 'Items', value: '$filesCount'),
-      subtitleTrailing: _InfoChip(label: 'Size', value: sizeText),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 360),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) {
-          final fade = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-          );
-          final slide = Tween<Offset>(
-            begin: const Offset(0, 0.06),
-            end: Offset.zero,
-          ).animate(fade);
-          return FadeTransition(
-            opacity: fade,
-            child: SlideTransition(position: slide, child: child),
-          );
-        },
-        child: Container(
-          key: ValueKey<int>(_selectedFiles.length),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final compact = constraints.maxWidth < 520;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_selectedFiles.isEmpty)
-                        _quickAddGrid(compact: compact),
-                    ],
-                  );
-                },
+    final card = widget.desktopLayout
+        ? GlassCard(
+            padding: const EdgeInsets.all(18),
+            borderRadius: BorderRadius.circular(24),
+            tintColor: Colors.white,
+            tintOpacity: 0.055,
+            borderColor: Colors.white,
+            borderOpacity: 0.13,
+            blurSigma: 22,
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black38,
+                blurRadius: 24,
+                offset: Offset(0, 10),
               ),
-              const SizedBox(height: 10),
-              if (_selectedFiles.isEmpty) ...[
-                if (!mobileQuickAdd)
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: _sending ? null : _pickFiles,
-                      child: Container(
-                        height: 140,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppColors.surfaceTertiary.withAlpha(170),
+            ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'What to ',
+                                  style: AppTextStyles.titleLarge.copyWith(
+                                    fontSize: 23,
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: 'send',
+                                  style: AppTextStyles.titleLarge.copyWith(
+                                    fontSize: 23,
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          color: AppCardTheme.base.surface,
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            HugeIcon(
-                              icon: HugeIcons.strokeRoundedCloudUpload,
-                              size: 28,
-                              color: AppColors.onTertiary,
+                          const SizedBox(height: 6),
+                          Text(
+                            filesCount == 0
+                                ? 'Start with files or text. Choose what you want to share.'
+                                : 'Ready to send.',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              fontSize: 13,
+                              color: const Color(0xFFB9C5D3),
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Drop files to add them',
-                              style: AppTextStyles.titleMedium,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Drop here or click to browse',
-                              style: AppTextStyles.bodySmall,
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-              ] else ...[
-                _AddMoreRow(
-                  enabled: !_sending,
-                  onTap: _showAddSheet,
-                  dragging: false,
-                  animation: _dropPulse,
+                    const SizedBox(width: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0D151B).withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF18232B)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.list_alt_rounded,
+                                size: 15,
+                                color: Color(0xFFB9C5D3),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Items: $filesCount',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 7),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.sd_storage_outlined,
+                                size: 15,
+                                color: Color(0xFFB9C5D3),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Size: $sizeText',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 330),
-                  child: ListView.separated(
-                    primary: false,
-                    shrinkWrap: true,
-                    itemCount: _selectedFiles.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) => buildFileRow(index),
+                const SizedBox(height: 18),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 360),
+                  switchInCurve: Curves.easeOutCubic,
+                  child: Container(
+                    key: ValueKey<int>(_selectedFiles.length),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_selectedFiles.isEmpty)
+                          _quickAddGrid(compact: false),
+                        const SizedBox(height: 14),
+                        if (_selectedFiles.isEmpty)
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: _sending ? null : _pickFiles,
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    height: 154,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0x301A2A24),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const HugeIcon(
+                                          icon: HugeIcons
+                                              .strokeRoundedCloudUpload,
+                                          size: 44,
+                                          color: Color(0xFF9BEA52),
+                                        ),
+                                        const SizedBox(height: 9),
+                                        Text(
+                                          'Drop files to add them',
+                                          style: AppTextStyles.titleMedium
+                                              .copyWith(
+                                                fontSize: 18,
+                                                color: AppColors.textPrimary,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'or click a category above',
+                                          style: AppTextStyles.bodySmall
+                                              .copyWith(
+                                                fontSize: 12,
+                                                color: const Color(0xFFB9C5D3),
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Positioned.fill(
+                                    child: IgnorePointer(
+                                      child: AnimatedBuilder(
+                                        animation: _dropPulse,
+                                        builder: (context, _) => CustomPaint(
+                                          painter: _MovingDashedBorderPainter(
+                                            progress: _draggingSelection
+                                                ? _dropPulse.value
+                                                : 0,
+                                            color: AppColors.primary.withValues(
+                                              alpha: 0.9,
+                                            ),
+                                            radius: 20,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        if (_selectedFiles.isNotEmpty) ...[
+                          _AddMoreRow(
+                            enabled: !_sending,
+                            onTap: _showAddSheet,
+                            dragging: false,
+                            animation: _dropPulse,
+                          ),
+                          const SizedBox(height: 8),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxHeight: 330),
+                            child: ListView.separated(
+                              primary: false,
+                              shrinkWrap: true,
+                              itemCount: _selectedFiles.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 8),
+                              itemBuilder: (context, index) =>
+                                  buildFileRow(index),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
               ],
-            ],
-          ),
-        ),
-      ),
-    );
+            ),
+          )
+        : SectionCard(
+            title: 'What to send',
+            subtitle: filesCount == 0
+                ? 'Start with files or text.'
+                : 'Ready to send.',
+            trailing: _InfoChip(label: 'Items', value: '$filesCount'),
+            subtitleTrailing: _InfoChip(label: 'Size', value: sizeText),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 360),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                final fade = CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                );
+                final slide = Tween<Offset>(
+                  begin: const Offset(0, 0.06),
+                  end: Offset.zero,
+                ).animate(fade);
+                return FadeTransition(
+                  opacity: fade,
+                  child: SlideTransition(position: slide, child: child),
+                );
+              },
+              child: Container(
+                key: ValueKey<int>(_selectedFiles.length),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final compact = constraints.maxWidth < 520;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_selectedFiles.isEmpty)
+                              _quickAddGrid(compact: compact),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    if (_selectedFiles.isEmpty) ...[
+                      if (!mobileQuickAdd)
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: _sending ? null : _pickFiles,
+                            child: Container(
+                              height: widget.desktopLayout ? 220 : 140,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(
+                                    alpha: widget.desktopLayout ? 0.88 : 0.45,
+                                  ),
+                                  style: BorderStyle.solid,
+                                ),
+                                color: widget.desktopLayout
+                                    ? const Color(0x301A2A24)
+                                    : AppCardTheme.base.surface,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  HugeIcon(
+                                    icon: HugeIcons.strokeRoundedCloudUpload,
+                                    size: 28,
+                                    color: widget.desktopLayout
+                                        ? const Color(0xFF9BEA52)
+                                        : AppColors.onTertiary,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Drop files to add them',
+                                    style: AppTextStyles.titleMedium,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    widget.desktopLayout
+                                        ? 'or click a category above'
+                                        : 'Drop here or click to browse',
+                                    style: AppTextStyles.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ] else ...[
+                      _AddMoreRow(
+                        enabled: !_sending,
+                        onTap: _showAddSheet,
+                        dragging: false,
+                        animation: _dropPulse,
+                      ),
+                      const SizedBox(height: 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 330),
+                        child: ListView.separated(
+                          primary: false,
+                          shrinkWrap: true,
+                          itemCount: _selectedFiles.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 8),
+                          itemBuilder: (context, index) => buildFileRow(index),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
 
     return AnimatedSize(
       duration: const Duration(milliseconds: 520),
@@ -1373,12 +1620,14 @@ if (\$icon -ne \$null) {
               },
               child: card,
             ),
-            if (_draggingSelection && _selectedFiles.isEmpty)
+            if (_draggingSelection &&
+                _selectedFiles.isEmpty &&
+                !widget.desktopLayout)
               Positioned(
                 left: 18,
                 right: 18,
                 bottom: 18,
-                height: 140,
+                height: widget.desktopLayout ? 220 : 140,
                 child: IgnorePointer(
                   child: AnimatedBuilder(
                     animation: _dropPulse,
@@ -1422,6 +1671,7 @@ if (\$icon -ne \$null) {
       child: _DevicesPane(
         selected: _selectedDevice,
         stream: widget.controller.devices,
+        hasItems: _selectedFiles.isNotEmpty,
         enabled: !_sending,
         canSelect: !_sending && _selectedFiles.isNotEmpty,
         refreshing: _refreshingDevices,
@@ -1474,9 +1724,9 @@ if (\$icon -ne \$null) {
               child: ListView(
                 controller: _scrollController,
                 padding: EdgeInsets.fromLTRB(
-                  18,
+                  12,
                   widget.desktopLayout ? 0 : 16,
-                  18,
+                  12,
                   96,
                 ),
                 children: [
@@ -1532,6 +1782,7 @@ class _DevicesPane extends StatelessWidget {
   const _DevicesPane({
     required this.selected,
     required this.stream,
+    required this.hasItems,
     required this.enabled,
     required this.canSelect,
     required this.refreshing,
@@ -1544,6 +1795,7 @@ class _DevicesPane extends StatelessWidget {
 
   final DeviceInfo? selected;
   final Stream<List<DeviceInfo>> stream;
+  final bool hasItems;
   final bool enabled;
   final bool canSelect;
   final bool refreshing;
@@ -1555,6 +1807,77 @@ class _DevicesPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!hasItems) {
+      return GlassCard(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        borderRadius: BorderRadius.circular(18),
+        blurSigma: 22,
+        tintColor: Colors.white,
+        tintOpacity: 0.045,
+        borderColor: Colors.white,
+        borderOpacity: 0.12,
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.18),
+                ),
+              ),
+              child: const Center(
+                child: HugeIcon(
+                  icon: HugeIcons.strokeRoundedWifiDisconnected03,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Where to send',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Add items first.',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _RefreshIconButton(
+              enabled: enabled,
+              refreshing: refreshing,
+              onPressed: onRefresh,
+            ),
+          ],
+        ),
+      );
+    }
+
     return SectionCard(
       title: 'Where to send',
       subtitle: canSelect ? 'Choose a nearby device.' : 'Add items first.',
@@ -1851,22 +2174,114 @@ class _QuickAddTile extends StatelessWidget {
     this.iconWidget,
     required this.label,
     required this.onTap,
+    this.desktop = false,
+    this.compact = false,
   });
 
   final IconData icon;
   final Widget? iconWidget;
   final String label;
   final VoidCallback onTap;
+  final bool desktop;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final hugeIcon = switch (label) {
-      'File' => HugeIcons.strokeRoundedFile01,
+      'File' => HugeIcons.strokeRoundedFile02,
       'Folder' => HugeIcons.strokeRoundedFolder01,
       'Images' || 'Image' => HugeIcons.strokeRoundedImage01,
       'Text' => HugeIcons.strokeRoundedNote01,
       _ => null,
     };
+    if (desktop) {
+      final accent = switch (label) {
+        'File' => const Color(0xFF91E83A),
+        'Folder' => const Color(0xFF55C7DC),
+        'Images' || 'Image' => const Color(0xFFB679D6),
+        'Text' => const Color(0xFFE4AB56),
+        _ => AppColors.primary,
+      };
+      final subtitle = switch (label) {
+        'File' => 'Any file type',
+        'Folder' => 'Share multiple files',
+        'Images' || 'Image' => 'Photos & pictures',
+        'Text' => 'Notes & messages',
+        _ => 'Choose an app',
+      };
+      final displayIcon = hugeIcon == null
+          ? iconWidget
+          : HugeIcon(icon: hugeIcon, size: 26, color: Colors.white);
+      return SizedBox(
+        height: compact ? 118 : 166,
+        child: GlassCard(
+          padding: EdgeInsets.zero,
+          borderRadius: BorderRadius.circular(20),
+          blurSigma: 24,
+          tintColor: Colors.white,
+          tintOpacity: 0.045,
+          borderColor: Colors.white,
+          borderOpacity: 0.14,
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 16,
+              offset: Offset(0, 7),
+            ),
+          ],
+          onTap: onTap,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: compact ? 42 : 50,
+                height: compact ? 42 : 50,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      accent.withValues(alpha: 0.95),
+                      accent.withValues(alpha: 0.55),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(compact ? 13 : 15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.2),
+                      blurRadius: 18,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: SizedBox(
+                    width: compact ? 24 : 28,
+                    height: compact ? 24 : 28,
+                    child: displayIcon,
+                  ),
+                ),
+              ),
+              SizedBox(height: compact ? 6 : 10),
+              Text(
+                label,
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: compact ? 14 : 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(height: compact ? 2 : 4),
+              Text(
+                subtitle,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: const Color(0xFFBBC7D5),
+                  fontSize: compact ? 10 : 11,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return SizedBox(
       height: 96,
       child: ActionTile(

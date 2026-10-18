@@ -98,6 +98,10 @@ Future<void> _configureWindowsWindow() async {
     TitleBarStyle.hidden,
     windowButtonVisibility: false,
   );
+  // Apply after the hidden title-bar style so the native resize frame is
+  // available while the custom maximize button remains hidden.
+  await windowManager.setResizable(true);
+  await windowManager.setMaximizable(false);
 }
 
 class SendixApp extends StatelessWidget {
