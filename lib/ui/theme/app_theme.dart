@@ -67,7 +67,7 @@ class AppTheme {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.surfaceSecondary,
+      fillColor: Color(0x0DFFFFFF),
       hintStyle: const TextStyle(color: AppColors.textTertiary),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
@@ -75,14 +75,11 @@ class AppTheme {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.surfaceSecondary),
+        borderSide: BorderSide(color: Colors.white24),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(
-          color: AppColors.surfaceSecondary,
-          width: 2,
-        ),
+        borderSide: const BorderSide(color: Colors.white38, width: 2),
       ),
     ),
     switchTheme: SwitchThemeData(

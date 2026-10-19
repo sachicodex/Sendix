@@ -77,6 +77,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     widget.sendController.transfers.addListener(_onSendTransfersChanged);
     widget.receiveController.transfers.addListener(_onReceiveTransfersChanged);
+    _completedSeen.addAll(
+      [
+            ...widget.sendController.transfers.value,
+            ...widget.receiveController.transfers.value,
+          ]
+          .where((transfer) => transfer.status == TransferStatus.completed)
+          .map((transfer) => transfer.transferId),
+    );
 
     _requestSubscription = widget.receiveController.incomingRequests.listen(
       _showRequestDialog,
@@ -324,7 +332,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         final filesPreview = request.files.take(6).toList(growable: false);
 
         Widget statTile({
-          required IconData icon,
+          required Widget icon,
           required String label,
           required String value,
         }) {
@@ -345,7 +353,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ],
             child: Row(
               children: [
-                Icon(icon, size: 18, color: AppColors.primaryAccent),
+                icon,
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -462,7 +470,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       children: [
                         Expanded(
                           child: statTile(
-                            icon: Icons.insert_drive_file_rounded,
+                            icon: const HugeIcon(
+                              icon: HugeIcons.strokeRoundedFile02,
+                              size: 22,
+                              color: AppColors.primaryAccent,
+                            ),
                             label: 'Files',
                             value: '${request.files.length}',
                           ),
@@ -470,7 +482,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         const SizedBox(width: 12),
                         Expanded(
                           child: statTile(
-                            icon: Icons.data_usage_rounded,
+                            icon: const Icon(
+                              Icons.data_usage_rounded,
+                              size: 18,
+                              color: AppColors.primaryAccent,
+                            ),
                             label: 'Total size',
                             value: totalSize,
                           ),
@@ -843,6 +859,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               identity: widget.sendController.identity,
               receiveSettingsController: widget.receiveSettingsController,
               fileManager: widget.fileManager,
+              showAppBar: false,
               desktopLayout: true,
             ),
           ];
@@ -1549,7 +1566,7 @@ class _SendTransferOverlayCard extends StatelessWidget {
         : 'Tap pause if you need to stop for a moment.';
 
     Widget summaryRow({
-      required IconData icon,
+      required Widget icon,
       required String label,
       required String value,
     }) {
@@ -1570,7 +1587,7 @@ class _SendTransferOverlayCard extends StatelessWidget {
         ],
         child: Row(
           children: [
-            Icon(icon, size: 18, color: AppColors.textSecondary),
+            icon,
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -1620,7 +1637,11 @@ class _SendTransferOverlayCard extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         summaryRow(
-          icon: Icons.insert_drive_file_rounded,
+          icon: const HugeIcon(
+            icon: HugeIcons.strokeRoundedFile02,
+            size: 22,
+            color: AppColors.textSecondary,
+          ),
           label: 'File',
           value: progress.fileName,
         ),
@@ -1629,7 +1650,11 @@ class _SendTransferOverlayCard extends StatelessWidget {
           children: [
             Expanded(
               child: summaryRow(
-                icon: Icons.data_usage_rounded,
+                icon: const Icon(
+                  Icons.data_usage_rounded,
+                  size: 18,
+                  color: AppColors.textSecondary,
+                ),
                 label: 'Size',
                 value: sizeText,
               ),
@@ -1637,7 +1662,11 @@ class _SendTransferOverlayCard extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: summaryRow(
-                icon: Icons.speed_rounded,
+                icon: const Icon(
+                  Icons.speed_rounded,
+                  size: 18,
+                  color: AppColors.textSecondary,
+                ),
                 label: isWaiting ? 'Status' : 'Speed',
                 value: speedText,
               ),
@@ -1754,12 +1783,12 @@ class _WindowsTitleBarState extends State<_WindowsTitleBar> {
                         BlendMode.srcIn,
                       ),
                       child: Image.asset(
-                        'assets/Logo/Sendix.png',
-                        width: 34,
-                        height: 34,
+                        'assets/Logo/Sendix - Transparent - Full.png',
+                        width: 22,
+                        height: 22,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Text(
                       'Sendix',
                       style: AppTextStyles.titleMedium.copyWith(

@@ -168,6 +168,8 @@ class TransferEngine {
             error: 'Receiver reported an error.',
           ),
         );
+      } else if (frame.type == FrameType.transferCompleteAck) {
+        if (!receiverCompleted.isCompleted) receiverCompleted.complete();
       } else if (frame.type == FrameType.pause) {
         transferControl.setPausedFromRemote(true);
       } else if (frame.type == FrameType.resume) {
@@ -263,17 +265,7 @@ class TransferEngine {
       _sendJson(socket, FrameType.transferEnd, {'transferId': transferId});
       await socket.flush();
       transferEndSent = true;
-      if (ackedBytes >= totalBytes && !receiverCompleted.isCompleted) {
-        receiverCompleted.complete();
-      }
-      if (ackedBytes < totalBytes) {
-        try {
-          await receiverCompleted.future.timeout(const Duration(seconds: 10));
-        } on TimeoutException {
-          // The receiver may not send a final acknowledgement on older
-          // clients. Keep the transfer usable, but do not block forever.
-        }
-      }
+      await receiverCompleted.future.timeout(const Duration(seconds: 10));
       if (receiverReportedError) {
         throw const SocketException('Receiver reported an error.');
       }
@@ -514,6 +506,9 @@ class TransferEngine {
 
       if (frame.type == FrameType.transferEnd) {
         _sendJson(socket, FrameType.progress, {'receivedBytes': receivedBytes});
+        _sendJson(socket, FrameType.transferCompleteAck, {
+          'transferId': transferId,
+        });
         throw const _TransferDone();
       }
 

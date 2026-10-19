@@ -335,6 +335,7 @@ if (\$icon -ne \$null) {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return SafeArea(
           child: Padding(
@@ -419,29 +420,128 @@ if (\$icon -ne \$null) {
     final text = await showDialog<String>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Send text'),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 680),
-            child: TextField(
-              controller: controller,
-              minLines: 10,
-              maxLines: 15,
-              decoration: const InputDecoration(
-                hintText: 'Type text to send...',
+        final dialogWidth = (MediaQuery.sizeOf(context).width - 40)
+            .clamp(280.0, 560.0)
+            .toDouble();
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 24,
+          ),
+          child: GlassCard(
+            width: dialogWidth,
+            padding: const EdgeInsets.all(20),
+            borderRadius: BorderRadius.circular(24),
+            tintColor: Colors.white,
+            tintOpacity: 0.065,
+            borderColor: Colors.white,
+            borderOpacity: 0.14,
+            blurSigma: 24,
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black54,
+                blurRadius: 28,
+                offset: Offset(0, 14),
               ),
+            ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Send text',
+                  style: AppTextStyles.titleLarge.copyWith(
+                    fontSize: 21,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Add a note or message to send.',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                TextField(
+                  controller: controller,
+                  minLines: 7,
+                  maxLines: 11,
+                  autofocus: true,
+                  style: AppTextStyles.bodyMedium.copyWith(fontSize: 15),
+                  cursorColor: AppColors.primaryAccent,
+                  decoration: InputDecoration(
+                    hintText: 'Type text to send...',
+                    hintStyle: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textTertiary,
+                    ),
+                    filled: true,
+                    fillColor: Colors.black.withValues(alpha: 0.18),
+                    contentPadding: const EdgeInsets.all(16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.12),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.12),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: AppColors.primaryAccent,
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.textSecondary,
+                        backgroundColor: Colors.white.withValues(alpha: 0.05),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: () => Navigator.of(context).pop(null),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 10),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        foregroundColor: AppColors.bg,
+                        backgroundColor: AppColors.primaryAccent,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: () =>
+                          Navigator.of(context).pop(controller.text),
+                      child: const Text('Add'),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(null),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(controller.text),
-              child: const Text('Add'),
-            ),
-          ],
         );
       },
     );
@@ -452,11 +552,14 @@ if (\$icon -ne \$null) {
 
   Future<void> _addTextAsFile(String text) async {
     final dir = await getTemporaryDirectory();
-    final stamp = DateTime.now()
-        .toIso8601String()
-        .replaceAll(':', '-')
-        .replaceAll('.', '-');
-    final path = p.join(dir.path, 'sendix_text_$stamp.txt');
+    final now = DateTime.now();
+    final date =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+    final time =
+        '${now.hour.toString().padLeft(2, '0')}-'
+        '${now.minute.toString().padLeft(2, '0')}';
+    final path = p.join(dir.path, 'Sendix Note $date $time.txt');
     await File(path).writeAsString(text, flush: true);
 
     final files = await widget.fileManager.transferFilesFromPaths([path]);
@@ -628,32 +731,85 @@ if (\$icon -ne \$null) {
       await showDialog<void>(
         context: context,
         builder: (context) {
+          final dialogWidth = (MediaQuery.sizeOf(context).width - 40)
+              .clamp(280.0, 680.0)
+              .toDouble();
+          final maxHeight = (MediaQuery.sizeOf(context).height - 120)
+              .clamp(260.0, 560.0)
+              .toDouble();
+
           return Dialog(
             backgroundColor: Colors.transparent,
             insetPadding: const EdgeInsets.symmetric(
-              horizontal: 24,
+              horizontal: 20,
               vertical: 24,
             ),
-            child: SizedBox(
-              width: 680,
-              height: 560,
-              child: GlassCard(
-                padding: EdgeInsets.zero,
-                tintColor: AppColors.surface,
-                tintOpacity: 0.96,
-                borderColor: AppColors.borderFocus,
-                borderOpacity: 0.9,
-                child: AlertDialog(
-                  backgroundColor: Colors.transparent,
-                  surfaceTintColor: Colors.transparent,
-                  title: Row(
+            child: GlassCard(
+              width: dialogWidth,
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+              borderRadius: BorderRadius.circular(24),
+              tintColor: Colors.white,
+              tintOpacity: 0.065,
+              borderColor: Colors.white,
+              borderOpacity: 0.14,
+              blurSigma: 24,
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black54,
+                  blurRadius: 28,
+                  offset: Offset(0, 14),
+                ),
+              ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryAccent.withValues(
+                            alpha: 0.12,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.primaryAccent.withValues(
+                              alpha: 0.25,
+                            ),
+                          ),
+                        ),
+                        child: const Center(
+                          child: HugeIcon(
+                            icon: HugeIcons.strokeRoundedNote01,
+                            size: 20,
+                            color: AppColors.primaryAccent,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          file.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.titleSmall,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Text note',
+                              style: AppTextStyles.titleMedium.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              file.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       IconButton(
@@ -668,36 +824,50 @@ if (\$icon -ne \$null) {
                       ),
                     ],
                   ),
-                  content: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxWidth: 640,
-                      maxHeight: 520,
-                    ),
+                  const SizedBox(height: 16),
+                  Divider(
+                    height: 1,
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
+                  const SizedBox(height: 16),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: maxHeight - 116),
                     child: FutureBuilder<String>(
                       future: File(path).readAsString(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState != ConnectionState.done) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
+                          return const Padding(
+                            padding: EdgeInsets.all(32),
+                            child: Center(child: CircularProgressIndicator()),
                           );
                         }
                         if (snapshot.hasError) {
                           return const Text('Failed to load preview.');
                         }
-                        final text = snapshot.data ?? '';
-                        return SingleChildScrollView(
-                          child: SelectableText(
-                            text,
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              fontSize: 16,
-                              height: 1.5,
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.16),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.08),
+                            ),
+                          ),
+                          child: SingleChildScrollView(
+                            child: SelectableText(
+                              snapshot.data ?? '',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                fontSize: 16,
+                                height: 1.5,
+                              ),
                             ),
                           ),
                         );
                       },
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           );
@@ -891,14 +1061,14 @@ if (\$icon -ne \$null) {
           _QuickAddTile(
             icon: Icons.image_rounded,
             iconWidget: svgIcon('assets/svg/image.svg', iconFg),
-            label: 'Image',
+            label: 'Images',
             onTap: _pickImages,
           ),
           _QuickAddTile(
-            icon: Icons.content_paste_rounded,
-            iconWidget: svgIcon('assets/svg/paste.svg', iconFg),
-            label: 'Paste',
-            onTap: _pasteClipboard,
+            icon: Icons.text_fields_rounded,
+            iconWidget: svgIcon('assets/svg/text.svg', iconFg),
+            label: 'Text',
+            onTap: _sendText,
           ),
         ];
       }
@@ -913,7 +1083,7 @@ if (\$icon -ne \$null) {
         _QuickAddTile(
           icon: Icons.image_rounded,
           iconWidget: svgIcon('assets/svg/image.svg', iconFg),
-          label: 'Image',
+          label: 'Images',
           onTap: _pickImages,
         ),
         _QuickAddTile(
@@ -923,10 +1093,10 @@ if (\$icon -ne \$null) {
           onTap: _isAndroidPlatform ? _showInstalledAppsSheet : _pickAppFiles,
         ),
         _QuickAddTile(
-          icon: Icons.content_paste_rounded,
-          iconWidget: svgIcon('assets/svg/paste.svg', iconFg),
-          label: 'Paste',
-          onTap: _pasteClipboard,
+          icon: Icons.text_fields_rounded,
+          iconWidget: svgIcon('assets/svg/text.svg', iconFg),
+          label: 'Text',
+          onTap: _sendText,
         ),
       ];
     }
@@ -975,7 +1145,7 @@ if (\$icon -ne \$null) {
   Widget _quickAddGrid({required bool compact}) {
     final mobileQuickAdd = _useMobileQuickAdd(context);
     final tiles = _quickAddTiles(
-      mobileOnly: false,
+      mobileOnly: mobileQuickAdd,
     ).take(4).toList(growable: false);
 
     if (mobileQuickAdd) {
@@ -1892,11 +2062,6 @@ class _DevicesPane extends StatelessWidget {
                 ],
               ),
             ),
-            _RefreshIconButton(
-              enabled: enabled,
-              refreshing: refreshing,
-              onPressed: onRefresh,
-            ),
           ],
         ),
       );
@@ -1953,9 +2118,14 @@ class _DevicesPane extends StatelessWidget {
                           style: AppTextStyles.titleSmall,
                         ),
                         SizedBox(height: 4),
-                        Text(
-                          'Turn on Wi-Fi and keep Sendix open on both devices.',
-                          style: AppTextStyles.bodySmall,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Turn on Wi-Fi and keep Sendix open on both devices.',
+                            maxLines: 1,
+                            style: AppTextStyles.bodySmall,
+                          ),
                         ),
                       ],
                     ),
@@ -2222,6 +2392,7 @@ class _QuickAddTile extends StatelessWidget {
       final accent = switch (label) {
         'File' => const Color(0xFF91E83A),
         'Folder' => const Color(0xFF55C7DC),
+        'App' => const Color(0xFF55C7DC),
         'Images' || 'Image' => const Color(0xFFB679D6),
         'Text' => const Color(0xFFE4AB56),
         _ => AppColors.primary,
@@ -2525,107 +2696,198 @@ class _InstalledAppsSheetState extends State<_InstalledAppsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Select app',
-          style: AppTextStyles.titleMedium,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _search,
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.search_rounded),
-            hintText: 'Search apps...',
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (_) => setState(() {}),
-        ),
-        const SizedBox(height: 12),
-        Flexible(
-          child: FutureBuilder<List<InstalledAppInfo>>(
-            future: _appsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final all = snapshot.data ?? const <InstalledAppInfo>[];
-              final q = _search.text.trim().toLowerCase();
-              final filtered = q.isEmpty
-                  ? all
-                  : all
-                        .where(
-                          (a) =>
-                              a.appName.toLowerCase().contains(q) ||
-                              a.packageName.toLowerCase().contains(q),
-                        )
-                        .toList(growable: false);
-
-              if (filtered.isEmpty) {
-                return EmptyState(
-                  title: 'No apps found',
-                  message: 'Try another search.',
-                  iconBuilder: (size) => SvgIcon(
-                    asset: 'assets/svg/app.svg',
-                    color: AppColors.primaryAccent,
-                    size: size,
+    return GlassCard(
+      width: double.infinity,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.82,
+      ),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+      borderRadius: BorderRadius.circular(26),
+      tintColor: Colors.white,
+      tintOpacity: 0.065,
+      borderColor: Colors.white,
+      borderOpacity: 0.15,
+      blurSigma: 24,
+      boxShadow: const [
+        BoxShadow(color: Colors.black54, blurRadius: 28, offset: Offset(0, 14)),
+      ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF55C7DC).withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF55C7DC).withValues(alpha: 0.26),
                   ),
-                );
-              }
-
-              return ListView.separated(
-                shrinkWrap: true,
-                itemCount: filtered.length,
-                separatorBuilder: (_, _) =>
-                    const Divider(height: 1, color: AppColors.divider),
-                itemBuilder: (context, index) {
-                  final app = filtered[index];
-                  final iconBytes = app.iconPng;
-
-                  return ListTile(
-                    leading: iconBytes == null
-                        ? SizedBox(
-                            width: 40,
-                            height: 40,
-                            child: Center(
-                              child: SvgIcon(
-                                asset: 'assets/svg/app.svg',
-                                color: AppColors.primaryAccent,
-                                size: 22,
-                              ),
-                            ),
+                ),
+                child: const Center(
+                  child: HugeIcon(
+                    icon: HugeIcons.strokeRoundedGridView,
+                    size: 20,
+                    color: Color(0xFF55C7DC),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Select app',
+                      style: AppTextStyles.titleMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Choose an installed app to send.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _search,
+            style: AppTextStyles.bodyMedium,
+            cursorColor: AppColors.primaryAccent,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search_rounded),
+              hintText: 'Search apps...',
+              hintStyle: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textTertiary,
+              ),
+              filled: true,
+              fillColor: Colors.black.withValues(alpha: 0.18),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 15,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.12),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.12),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(
+                  color: AppColors.primaryAccent,
+                  width: 1.5,
+                ),
+              ),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 12),
+          Flexible(
+            child: FutureBuilder<List<InstalledAppInfo>>(
+              future: _appsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final all = snapshot.data ?? const <InstalledAppInfo>[];
+                final q = _search.text.trim().toLowerCase();
+                final filtered = q.isEmpty
+                    ? all
+                    : all
+                          .where(
+                            (a) =>
+                                a.appName.toLowerCase().contains(q) ||
+                                a.packageName.toLowerCase().contains(q),
                           )
-                        : ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.memory(
-                              iconBytes,
+                          .toList(growable: false);
+
+                if (filtered.isEmpty) {
+                  return EmptyState(
+                    title: 'No apps found',
+                    message: 'Try another search.',
+                    iconBuilder: (size) => SvgIcon(
+                      asset: 'assets/svg/app.svg',
+                      color: AppColors.primaryAccent,
+                      size: size,
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, _) =>
+                      const Divider(height: 1, color: AppColors.divider),
+                  itemBuilder: (context, index) {
+                    final app = filtered[index];
+                    final iconBytes = app.iconPng;
+
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      tileColor: Colors.white.withValues(alpha: 0.025),
+                      leading: iconBytes == null
+                          ? SizedBox(
                               width: 40,
                               height: 40,
-                              fit: BoxFit.cover,
-                              gaplessPlayback: true,
+                              child: Center(
+                                child: SvgIcon(
+                                  asset: 'assets/svg/app.svg',
+                                  color: AppColors.primaryAccent,
+                                  size: 22,
+                                ),
+                              ),
+                            )
+                          : ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.memory(
+                                iconBytes,
+                                width: 40,
+                                height: 40,
+                                fit: BoxFit.cover,
+                                gaplessPlayback: true,
+                              ),
                             ),
-                          ),
-                    title: Text(
-                      app.appName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Text(
-                      app.packageName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    onTap: () => widget.onPick(app),
-                  );
-                },
-              );
-            },
+                      title: Text(
+                        app.appName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        app.packageName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () => widget.onPick(app),
+                    );
+                  },
+                );
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

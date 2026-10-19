@@ -29,6 +29,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
   msix: ^3.16.7
 
 flutter:
@@ -46,12 +47,38 @@ flutter:
           weight: 500
         - asset: assets/fonts/sf pro display/SF PRO DISPLAY BOLD.OTF
           weight: 700
+    - family: Square721ExtendedBold
+      fonts:
+        - asset: assets/fonts/Square 721 Extended Bold/Square 721 Extended Bold.otf
+          weight: 700
 
 msix_config:
   display_name: Sendix
   publisher_display_name: Sendix
   identity_name: com.sachicodex.sendix
-  logo_path: assets/Logo/Sendix-windows.png
+  logo_path: assets/Logo/Sendix - Transparent - Windows.png
   architecture: x64
   install_certificate: true
   capabilities: internetClient, internetClientServer, privateNetworkClientServer
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/Logo/Sendix - Transparent - Full.png
+  image_path_android: assets/Logo/Sendix - Transparent - App.png
+  image_path_ios: assets/Logo/Sendix - Transparent - Full.png
+  adaptive_icon_background: '#0D0F12'
+  adaptive_icon_foreground: assets/Logo/Sendix - Transparent - App.png
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: assets/Logo/Sendix - Transparent - Full.png
+    background_color: '#0D0F12'
+    theme_color: '#0D0F12'
+  windows:
+    generate: true
+    image_path: assets/Logo/Sendix - Transparent - Windows.png
+    icon_size: 256
+  macos:
+    generate: true
+    image_path: assets/Logo/Sendix - Transparent - Full.png

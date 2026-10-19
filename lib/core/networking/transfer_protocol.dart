@@ -14,6 +14,7 @@ class FrameType {
   static const int pause = 10;
   static const int resume = 11;
   static const int cancel = 12;
+  static const int transferCompleteAck = 13;
 }
 
 class Frame {

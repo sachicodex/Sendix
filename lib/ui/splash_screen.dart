@@ -50,15 +50,21 @@ class _SplashScreenState extends State<SplashScreen>
       mainAxisSize: MainAxisSize.min,
       children: [
         _LogoBadge(
-          image: Image.asset('assets/Logo/Sendix.png', width: 100, height: 100),
+          image: Image.asset(
+            'assets/Logo/Sendix - Transparent - Full.png',
+            width: 100,
+            height: 100,
+          ),
         ),
         SizedBox(height: 16),
         Text(
           'SENDIX',
           style: AppTextStyles.headlineSmall.copyWith(
-            color: AppColors.textPrimary.withAlpha(210),
+            fontFamily: 'Square721ExtendedBold',
+            color: const Color(0xFFC5CDD0),
             decoration: TextDecoration.none,
-            fontWeight: FontWeight.w600,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
             letterSpacing: 1.01,
           ),
         ),

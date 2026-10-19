@@ -38,10 +38,10 @@ class SectionCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       borderRadius: const BorderRadius.all(Radius.circular(20)),
       tintColor: Colors.white,
-      tintOpacity: 0.05,
+      tintOpacity: 0.025,
       borderColor: Colors.white,
       borderOpacity: 0.13,
-      blurSigma: 20,
+      blurSigma: 14,
       boxShadow: const [
         BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 8)),
       ],

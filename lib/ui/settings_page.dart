@@ -135,7 +135,20 @@ class _SettingsPageState extends State<SettingsPage>
                 decoration: InputDecoration(
                   hintText: 'e.g. My Laptop',
                   isDense: true,
+                  filled: false,
                   contentPadding: fieldPadding,
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide(color: Colors.white12),
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide(color: Colors.white12),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide(color: Colors.white38, width: 2),
+                  ),
                   suffixIcon: MouseRegion(
                     cursor: SystemMouseCursors.click,
                     child: GestureDetector(
@@ -220,7 +233,16 @@ class _SettingsPageState extends State<SettingsPage>
                         maxLines: 1,
                         decoration: const InputDecoration(
                           isDense: true,
+                          filled: false,
                           contentPadding: fieldPadding,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                            borderSide: BorderSide(color: Colors.white12),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                            borderSide: BorderSide(color: Colors.white12),
+                          ),
                         ),
                         style: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.textPrimary,
@@ -253,7 +275,7 @@ class _SettingsPageState extends State<SettingsPage>
                                 color: AppColors.surfaceTertiary,
                                 width: 1,
                               ),
-                              backgroundColor: AppColors.surfaceSecondary,
+                              backgroundColor: Colors.transparent,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),
@@ -272,6 +294,7 @@ class _SettingsPageState extends State<SettingsPage>
                                       .setCustomSavePath(null),
                             style: TextButton.styleFrom(
                               foregroundColor: AppColors.textSecondary,
+                              backgroundColor: Colors.transparent,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 18,
                                 vertical: 14,
@@ -367,10 +390,10 @@ class _AboutInfoCard extends StatelessWidget {
     return GlassCard(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
       borderRadius: BorderRadius.circular(18),
-      tintColor: AppColors.surfaceTertiary,
-      tintOpacity: 0.7,
+      tintColor: Colors.white,
+      tintOpacity: 0.045,
       borderColor: AppColors.surfaceSecondary,
-      borderOpacity: 0.9,
+      borderOpacity: 0.35,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

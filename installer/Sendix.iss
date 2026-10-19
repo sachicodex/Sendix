@@ -34,7 +34,7 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=admin
 OutputDir=F:\02 Soft Dev\Flutter Development\Sendix\installer\Output
 OutputBaseFilename=Sendix-Setup
-SetupIconFile=F:\02 Soft Dev\Flutter Development\Sendix\assets\Icon\Sendix.ico
+SetupIconFile=F:\02 Soft Dev\Flutter Development\Sendix\assets\Logo\Sendix.ico
 SolidCompression=yes
 WizardStyle=modern dynamic
 
