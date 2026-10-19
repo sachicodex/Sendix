@@ -105,6 +105,9 @@ class TransferEngine {
 
     var lastProgressBytes = 0;
     var lastProgressAt = DateTime.fromMillisecondsSinceEpoch(0);
+    var transferEndSent = false;
+    var receiverReportedError = false;
+    final receiverCompleted = Completer<void>();
 
     late final StreamSubscription<TransferControlCommand> controlSub;
     controlSub = transferControl.commands.listen((cmd) {
@@ -144,9 +147,16 @@ class TransferEngine {
                 ),
               );
             }
+            if (transferEndSent &&
+                ackedBytes >= totalBytes &&
+                !receiverCompleted.isCompleted) {
+              receiverCompleted.complete();
+            }
           }
         } catch (_) {}
       } else if (frame.type == FrameType.error) {
+        receiverReportedError = true;
+        if (!receiverCompleted.isCompleted) receiverCompleted.complete();
         onProgress(
           TransferProgress(
             transferId: transferId,
@@ -252,6 +262,21 @@ class TransferEngine {
       }
       _sendJson(socket, FrameType.transferEnd, {'transferId': transferId});
       await socket.flush();
+      transferEndSent = true;
+      if (ackedBytes >= totalBytes && !receiverCompleted.isCompleted) {
+        receiverCompleted.complete();
+      }
+      if (ackedBytes < totalBytes) {
+        try {
+          await receiverCompleted.future.timeout(const Duration(seconds: 10));
+        } on TimeoutException {
+          // The receiver may not send a final acknowledgement on older
+          // clients. Keep the transfer usable, but do not block forever.
+        }
+      }
+      if (receiverReportedError) {
+        throw const SocketException('Receiver reported an error.');
+      }
     } catch (error) {
       if (transferControl.cancelled.value) {
         finalStatus = TransferStatus.cancelled;

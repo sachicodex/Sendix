@@ -974,19 +974,30 @@ if (\$icon -ne \$null) {
 
   Widget _quickAddGrid({required bool compact}) {
     final mobileQuickAdd = _useMobileQuickAdd(context);
-    final tiles = _quickAddTiles(mobileOnly: mobileQuickAdd);
+    final tiles = _quickAddTiles(
+      mobileOnly: false,
+    ).take(4).toList(growable: false);
 
     if (mobileQuickAdd) {
-      return SizedBox(
-        height: 104,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: tiles.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 12),
-          itemBuilder: (context, index) {
-            return SizedBox(width: 108, child: tiles[index]);
-          },
-        ),
+      return GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.25,
+        children: tiles
+            .map(
+              (tile) => _QuickAddTile(
+                icon: tile.icon,
+                iconWidget: tile.iconWidget,
+                label: tile.label,
+                onTap: tile.onTap,
+                desktop: true,
+                compact: true,
+              ),
+            )
+            .toList(growable: false),
       );
     }
 
@@ -1272,7 +1283,7 @@ if (\$icon -ne \$null) {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       child: Column(
@@ -1300,10 +1311,11 @@ if (\$icon -ne \$null) {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 6),
                           Text(
                             filesCount == 0
-                                ? 'Start with files or text. Choose what you want to share.'
+                                ? (mobileQuickAdd
+                                      ? 'Start with files or text.'
+                                      : 'Start with files or text. Choose what you want to share.')
                                 : 'Ready to send.',
                             style: AppTextStyles.bodyMedium.copyWith(
                               fontSize: 13,
@@ -1365,7 +1377,7 @@ if (\$icon -ne \$null) {
                     ),
                   ],
                 ),
-                const SizedBox(height: 18),
+                SizedBox(height: mobileQuickAdd ? 10 : 18),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 360),
                   switchInCurve: Curves.easeOutCubic,
@@ -1376,75 +1388,78 @@ if (\$icon -ne \$null) {
                       children: [
                         if (_selectedFiles.isEmpty)
                           _quickAddGrid(compact: false),
-                        const SizedBox(height: 14),
-                        if (_selectedFiles.isEmpty)
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: _sending ? null : _pickFiles,
-                              child: Stack(
-                                children: [
-                                  Container(
-                                    height: 154,
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0x301A2A24),
-                                      borderRadius: BorderRadius.circular(20),
+                        if (!mobileQuickAdd) ...[
+                          const SizedBox(height: 14),
+                          if (_selectedFiles.isEmpty)
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: _sending ? null : _pickFiles,
+                                child: Stack(
+                                  children: [
+                                    Container(
+                                      height: 154,
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0x301A2A24),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const HugeIcon(
+                                            icon: HugeIcons
+                                                .strokeRoundedCloudUpload,
+                                            size: 44,
+                                            color: Color(0xFF9BEA52),
+                                          ),
+                                          const SizedBox(height: 9),
+                                          Text(
+                                            'Drop files to add them',
+                                            style: AppTextStyles.titleMedium
+                                                .copyWith(
+                                                  fontSize: 18,
+                                                  color: AppColors.textPrimary,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'or click a category above',
+                                            style: AppTextStyles.bodySmall
+                                                .copyWith(
+                                                  fontSize: 12,
+                                                  color: const Color(
+                                                    0xFFB9C5D3,
+                                                  ),
+                                                ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        const HugeIcon(
-                                          icon: HugeIcons
-                                              .strokeRoundedCloudUpload,
-                                          size: 44,
-                                          color: Color(0xFF9BEA52),
-                                        ),
-                                        const SizedBox(height: 9),
-                                        Text(
-                                          'Drop files to add them',
-                                          style: AppTextStyles.titleMedium
-                                              .copyWith(
-                                                fontSize: 18,
-                                                color: AppColors.textPrimary,
-                                              ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'or click a category above',
-                                          style: AppTextStyles.bodySmall
-                                              .copyWith(
-                                                fontSize: 12,
-                                                color: const Color(0xFFB9C5D3),
-                                              ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Positioned.fill(
-                                    child: IgnorePointer(
-                                      child: AnimatedBuilder(
-                                        animation: _dropPulse,
-                                        builder: (context, _) => CustomPaint(
-                                          painter: _MovingDashedBorderPainter(
-                                            progress: _draggingSelection
-                                                ? _dropPulse.value
-                                                : 0,
-                                            color: AppColors.primary.withValues(
-                                              alpha: 0.9,
+                                    Positioned.fill(
+                                      child: IgnorePointer(
+                                        child: AnimatedBuilder(
+                                          animation: _dropPulse,
+                                          builder: (context, _) => CustomPaint(
+                                            painter: _MovingDashedBorderPainter(
+                                              progress: _draggingSelection
+                                                  ? _dropPulse.value
+                                                  : 0,
+                                              color: AppColors.primary
+                                                  .withValues(alpha: 0.9),
+                                              radius: 20,
                                             ),
-                                            radius: 20,
                                           ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
+                        ],
                         if (_selectedFiles.isNotEmpty) ...[
                           _AddMoreRow(
                             enabled: !_sending,
@@ -1534,9 +1549,18 @@ if (\$icon -ne \$null) {
                                   ),
                                   style: BorderStyle.solid,
                                 ),
-                                color: widget.desktopLayout
-                                    ? const Color(0x301A2A24)
-                                    : AppCardTheme.base.surface,
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    const Color(0xFF193526).withValues(
+                                      alpha: widget.desktopLayout ? 0.42 : 0.28,
+                                    ),
+                                    const Color(0xFF0E1718).withValues(
+                                      alpha: widget.desktopLayout ? 0.72 : 0.9,
+                                    ),
+                                  ],
+                                ),
                               ),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1599,7 +1623,7 @@ if (\$icon -ne \$null) {
         child: Stack(
           children: [
             DropTarget(
-              enable: !_sending,
+              enable: !_sending && !mobileQuickAdd,
               onDragEntered: (_) {
                 setState(() => _draggingSelection = true);
                 _dropPulse.repeat(reverse: true);
@@ -2284,22 +2308,49 @@ class _QuickAddTile extends StatelessWidget {
     }
     return SizedBox(
       height: 96,
-      child: ActionTile(
-        icon: icon,
-        iconWidget: hugeIcon == null
-            ? iconWidget
-            : HugeIcon(icon: hugeIcon, size: 22, color: AppColors.textPrimary),
-        label: label,
-        onTap: onTap,
-        iconBackgroundColor: AppColors.surfaceTertiary,
-        iconColor: AppColors.textPrimary,
-        showIconBackground: false,
-        elevated: true,
-        iconContainerSize: 36,
-        iconSize: 22,
-        vertical: true,
-        showBorder: true,
+      child: GlassCard(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        borderRadius: BorderRadius.circular(16),
+        blurSigma: 22,
+        tintColor: Colors.white,
+        tintOpacity: 0.045,
+        borderColor: Colors.white,
+        borderOpacity: 0.13,
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 16,
+            offset: Offset(0, 7),
+          ),
+        ],
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 36,
+              height: 36,
+              child: Center(
+                child: hugeIcon == null
+                    ? iconWidget
+                    : HugeIcon(
+                        icon: hugeIcon,
+                        size: 22,
+                        color: AppColors.textPrimary,
+                      ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.labelLarge.copyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2325,30 +2376,32 @@ class _AddMoreRow extends StatelessWidget {
       child: Stack(
         children: [
           Positioned.fill(
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: enabled ? onTap : null,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceTertiary.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: const Row(
-                    children: [
-                      HugeIcon(
-                        icon: HugeIcons.strokeRoundedAdd01,
-                        size: 21,
-                        color: AppColors.primary,
-                      ),
-                      SizedBox(width: 10),
-                      Text('Add more files'),
-                    ],
-                  ),
+            child: GlassCard(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              borderRadius: BorderRadius.circular(14),
+              blurSigma: 20,
+              tintColor: Colors.white,
+              tintOpacity: 0.04,
+              borderColor: Colors.white,
+              borderOpacity: 0.12,
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 12,
+                  offset: Offset(0, 5),
                 ),
+              ],
+              onTap: enabled ? onTap : null,
+              child: const Row(
+                children: [
+                  HugeIcon(
+                    icon: HugeIcons.strokeRoundedAdd01,
+                    size: 21,
+                    color: AppColors.primary,
+                  ),
+                  SizedBox(width: 10),
+                  Text('Add more files'),
+                ],
               ),
             ),
           ),

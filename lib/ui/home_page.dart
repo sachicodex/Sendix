@@ -331,10 +331,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           return GlassCard(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             borderRadius: BorderRadius.circular(16),
-            tintColor: AppColors.surfaceTertiary,
-            tintOpacity: 0.9,
-            borderColor: AppColors.surfaceSecondary,
-            borderOpacity: 0.9,
+            tintColor: Colors.white,
+            tintOpacity: 0.045,
+            borderColor: Colors.white,
+            borderOpacity: 0.12,
+            blurSigma: 20,
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 14,
+                offset: Offset(0, 6),
+              ),
+            ],
             child: Row(
               children: [
                 Icon(icon, size: 18, color: AppColors.primaryAccent),
@@ -371,10 +379,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             borderRadius: BorderRadius.circular(18),
-            tintColor: AppColors.surfaceTertiary,
-            tintOpacity: 0.55,
-            borderColor: AppColors.surfaceSecondary,
-            borderOpacity: 0.9,
+            tintColor: Colors.white,
+            tintOpacity: 0.04,
+            borderColor: Colors.white,
+            borderOpacity: 0.11,
+            blurSigma: 20,
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 14,
+                offset: Offset(0, 6),
+              ),
+            ],
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -403,10 +419,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             child: GlassCard(
               padding: EdgeInsets.zero,
               borderRadius: BorderRadius.circular(28),
-              tintColor: AppColors.surface,
-              tintOpacity: 0.96,
-              borderColor: AppColors.surfaceSecondary,
-              borderOpacity: 0.95,
+              tintColor: Colors.white,
+              tintOpacity: 0.06,
+              borderColor: Colors.white,
+              borderOpacity: 0.14,
+              blurSigma: 24,
               boxShadow: const [
                 BoxShadow(
                   color: Colors.black87,
@@ -566,6 +583,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         final rejectButton = OutlinedButton(
                           onPressed: () => Navigator.of(context).pop(false),
                           style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textPrimary,
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.045,
+                            ),
+                            side: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.12),
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -680,10 +704,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       constraints: const BoxConstraints(maxWidth: 560),
                       child: GlassCard(
                         padding: const EdgeInsets.all(18),
-                        tintColor: AppColors.surfaceTertiary,
-                        tintOpacity: 0.52,
-                        borderColor: AppColors.borderFocus,
-                        borderOpacity: 0.72,
+                        tintColor: Colors.white,
+                        tintOpacity: 0.055,
+                        borderColor: Colors.white,
+                        borderOpacity: 0.14,
                         blurSigma: 20,
                         child: _SendTransferOverlayCard(
                           progress: latest,
@@ -1170,7 +1194,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         }
 
         final shell = Scaffold(
+          extendBody: true,
+          extendBodyBehindAppBar: true,
+          backgroundColor: const Color(0xFF070C10),
           appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            shadowColor: Colors.transparent,
             title: Text(
               'SENDIX',
               style: AppTextStyles.titleLarge.copyWith(
@@ -1182,86 +1213,117 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
             centerTitle: true,
           ),
-          body: SafeArea(
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onHorizontalDragStart: (_) => _dragDx = 0.0,
-              onHorizontalDragUpdate: (details) => _dragDx += details.delta.dx,
-              onHorizontalDragEnd: (details) {
-                if (_splashVisible) return;
-                final velocity = details.velocity.pixelsPerSecond.dx;
-                final delta = _dragDx;
-                if (velocity.abs() > 300) {
-                  _handleNavigation(_index + (velocity < 0 ? 1 : -1));
-                  return;
-                }
-                if (delta.abs() > 60) {
-                  _handleNavigation(_index + (delta < 0 ? 1 : -1));
-                }
-              },
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (index) {
-                  if (!mounted) return;
-                  setState(() => _index = _clampIndex(index));
-                },
-                children: [
-                  SendPage(
-                    controller: widget.sendController,
-                    receiveSettingsController: widget.receiveSettingsController,
-                    fileManager: widget.fileManager,
-                    sharedFiles: _sharedFiles,
-                    desktopLayout: false,
+          body: Stack(
+            children: [
+              const Positioned.fill(child: _SendixBackdrop()),
+              SafeArea(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onHorizontalDragStart: (_) => _dragDx = 0.0,
+                  onHorizontalDragUpdate: (details) =>
+                      _dragDx += details.delta.dx,
+                  onHorizontalDragEnd: (details) {
+                    if (_splashVisible) return;
+                    final velocity = details.velocity.pixelsPerSecond.dx;
+                    final delta = _dragDx;
+                    if (velocity.abs() > 300) {
+                      _handleNavigation(_index + (velocity < 0 ? 1 : -1));
+                      return;
+                    }
+                    if (delta.abs() > 60) {
+                      _handleNavigation(_index + (delta < 0 ? 1 : -1));
+                    }
+                  },
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    onPageChanged: (index) {
+                      if (!mounted) return;
+                      setState(() => _index = _clampIndex(index));
+                    },
+                    children: [
+                      SendPage(
+                        controller: widget.sendController,
+                        receiveSettingsController:
+                            widget.receiveSettingsController,
+                        fileManager: widget.fileManager,
+                        sharedFiles: _sharedFiles,
+                        desktopLayout: true,
+                      ),
+                      ReceivePage(
+                        controller: widget.receiveController,
+                        outgoingTransfers: widget.sendController.transfers,
+                        outgoingStartTimeFor:
+                            widget.sendController.startTimeFor,
+                        desktopLayout: true,
+                      ),
+                      SettingsPage(
+                        identity: widget.sendController.identity,
+                        receiveSettingsController:
+                            widget.receiveSettingsController,
+                        fileManager: widget.fileManager,
+                        showAppBar: false,
+                        desktopLayout: true,
+                      ),
+                    ],
                   ),
-                  ReceivePage(
-                    controller: widget.receiveController,
-                    outgoingTransfers: widget.sendController.transfers,
-                    outgoingStartTimeFor: widget.sendController.startTimeFor,
-                    desktopLayout: false,
+                ),
+              ),
+            ],
+          ),
+          bottomNavigationBar: Container(
+            padding: const EdgeInsets.only(top: 1),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0A1012).withValues(alpha: 0.82),
+              border: Border(
+                top: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black54,
+                  blurRadius: 24,
+                  offset: Offset(0, -8),
+                ),
+              ],
+            ),
+            child: NavigationBarTheme(
+              data: NavigationBarThemeData(
+                backgroundColor: Colors.transparent,
+                surfaceTintColor: Colors.transparent,
+                indicatorColor: AppColors.primary.withValues(alpha: 0.14),
+                height: 72,
+                labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                  final selected = states.contains(WidgetState.selected);
+                  return AppTextStyles.labelLarge.copyWith(
+                    color: selected ? navSelected : navUnselected,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  );
+                }),
+              ),
+              child: NavigationBar(
+                selectedIndex: _index.clamp(0, 2),
+                onDestinationSelected: _handleNavigation,
+                destinations: [
+                  NavigationDestination(
+                    icon: navSvg('assets/svg/send.svg', navUnselected),
+                    selectedIcon: navSvg('assets/svg/send.svg', navSelected),
+                    label: 'Send',
+                    tooltip: '',
                   ),
-                  SettingsPage(
-                    identity: widget.sendController.identity,
-                    receiveSettingsController: widget.receiveSettingsController,
-                    fileManager: widget.fileManager,
-                    showAppBar: false,
-                    desktopLayout: false,
+                  NavigationDestination(
+                    icon: navSvg('assets/svg/receive.svg', navUnselected),
+                    selectedIcon: navSvg('assets/svg/receive.svg', navSelected),
+                    label: 'Activity',
+                    tooltip: '',
+                  ),
+                  NavigationDestination(
+                    icon: navSvg('assets/svg/setting.svg', navUnselected),
+                    selectedIcon: navSvg('assets/svg/setting.svg', navSelected),
+                    label: 'Settings',
+                    tooltip: '',
                   ),
                 ],
               ),
-            ),
-          ),
-          bottomNavigationBar: Container(
-            decoration: const BoxDecoration(
-              border: Border(
-                top: BorderSide(color: AppColors.surfaceSecondary),
-              ),
-            ),
-            child: NavigationBar(
-              selectedIndex: _index.clamp(0, 2),
-              onDestinationSelected: (index) {
-                _handleNavigation(index);
-              },
-              destinations: [
-                NavigationDestination(
-                  icon: navSvg('assets/svg/send.svg', navUnselected),
-                  selectedIcon: navSvg('assets/svg/send.svg', navSelected),
-                  label: 'Send',
-                  tooltip: '',
-                ),
-                NavigationDestination(
-                  icon: navSvg('assets/svg/receive.svg', navUnselected),
-                  selectedIcon: navSvg('assets/svg/receive.svg', navSelected),
-                  label: 'Receive',
-                  tooltip: '',
-                ),
-                NavigationDestination(
-                  icon: navSvg('assets/svg/setting.svg', navUnselected),
-                  selectedIcon: navSvg('assets/svg/setting.svg', navSelected),
-                  label: 'Settings',
-                  tooltip: '',
-                ),
-              ],
             ),
           ),
         );
@@ -1281,6 +1343,60 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       unitIndex++;
     }
     return '${size.toStringAsFixed(1)} ${units[unitIndex]}';
+  }
+}
+
+class _SendixBackdrop extends StatelessWidget {
+  const _SendixBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(color: Color(0xFF070C10)),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(-0.9, -0.2),
+                radius: 1.35,
+                colors: [
+                  AppColors.tertiary.withValues(alpha: 0.26),
+                  const Color(0xFF07120F).withValues(alpha: 0.16),
+                  const Color(0xFF05090D).withValues(alpha: 0.0),
+                ],
+                stops: const [0.0, 0.38, 1.0],
+              ),
+            ),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(0.72, 0.75),
+                radius: 1.15,
+                colors: [
+                  const Color(0xFF0E3524).withValues(alpha: 0.12),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(0.86, -0.88),
+                radius: 0.95,
+                colors: [
+                  const Color(0xFF24604D).withValues(alpha: 0.18),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1440,10 +1556,18 @@ class _SendTransferOverlayCard extends StatelessWidget {
       return GlassCard(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         borderRadius: BorderRadius.circular(14),
-        tintColor: AppColors.surfaceTertiary,
-        tintOpacity: 0.85,
-        borderColor: AppColors.surfaceSecondary,
-        borderOpacity: 0.9,
+        tintColor: Colors.white,
+        tintOpacity: 0.045,
+        borderColor: Colors.white,
+        borderOpacity: 0.12,
+        blurSigma: 20,
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
         child: Row(
           children: [
             Icon(icon, size: 18, color: AppColors.textSecondary),
@@ -1556,6 +1680,16 @@ class _SendTransferOverlayCard extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: onCancel,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    backgroundColor: Colors.white.withValues(alpha: 0.045),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.12),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
                   icon: const Icon(Icons.close_rounded),
                   label: const Text('Cancel'),
                 ),

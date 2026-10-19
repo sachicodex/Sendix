@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:sendix/ui/theme/colors.dart';
 import 'package:sendix/ui/theme/text_styles.dart';
@@ -70,177 +72,184 @@ class ActionTile extends StatelessWidget {
             ? const EdgeInsets.symmetric(horizontal: 10, vertical: 12)
             : const EdgeInsets.symmetric(horizontal: 12, vertical: 10));
 
-    return Material(
-      color: Colors.transparent,
-      shape: shape,
-      elevation: elevated ? 4 : 0,
-      shadowColor: Colors.black.withValues(alpha: 0.5),
-      clipBehavior: Clip.antiAlias,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: AppColors.surfaceTertiary,
-          gradient: elevated
-              ? LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.white.withValues(alpha: 0.05),
-                    AppColors.surfaceTertiary.withValues(alpha: 0.95),
-                    AppColors.surfaceTertiary.withValues(alpha: 0.84),
-                  ],
-                  stops: const [0, 0.12, 1],
-                )
-              : null,
-          borderRadius: BorderRadius.circular(16),
-          border: null,
-          boxShadow: elevated
-              ? [
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Material(
+          color: Colors.transparent,
+          shape: shape,
+          elevation: elevated ? 4 : 0,
+          shadowColor: Colors.black.withValues(alpha: 0.35),
+          clipBehavior: Clip.antiAlias,
+          child: Ink(
+            decoration: BoxDecoration(
+              color: selected
+                  ? (selectedBackgroundColor ??
+                        AppColors.primary.withValues(alpha: 0.1))
+                  : Colors.white.withValues(alpha: 0.035),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.white.withValues(alpha: 0.055),
+                  Colors.white.withValues(alpha: 0.018),
+                  Colors.transparent,
+                ],
+                stops: const [0, 0.2, 1],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: selected
+                    ? AppColors.primary.withValues(alpha: 0.45)
+                    : Colors.white.withValues(alpha: 0.12),
+              ),
+              boxShadow: [
+                if (elevated)
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
+                    color: Colors.black.withValues(alpha: 0.24),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
                   ),
-                  BoxShadow(
-                    color: Colors.white.withValues(alpha: 0.035),
-                    blurRadius: 1,
-                    offset: const Offset(0, -1),
-                  ),
-                ]
-              : null,
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Padding(
-            padding: contentPadding,
-            child: vertical
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      if (showIconBackground)
-                        Container(
-                          width: iconBox,
-                          height: iconBox,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: iconBg,
-                          ),
-                          child: Center(
-                            child: SizedBox(
-                              width: iconPx,
-                              height: iconPx,
-                              child: iconChild,
-                            ),
-                          ),
-                        )
-                      else
-                        SizedBox(
-                          width: iconBox,
-                          height: iconBox,
-                          child: Center(
-                            child: SizedBox(
-                              width: iconPx,
-                              height: iconPx,
-                              child: iconChild,
-                            ),
-                          ),
-                        ),
-                      if (label != null) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          label!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.labelLarge.copyWith(
-                            color: labelColor ?? AppTextStyles.labelLarge.color,
-                          ),
-                        ),
-                      ],
-                      if (subtitle case final s?) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          s,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ],
-                  )
-                : Row(
-                    children: [
-                      if (showIconBackground)
-                        Container(
-                          width: iconBox,
-                          height: iconBox,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: iconBg,
-                          ),
-                          child: Center(
-                            child: SizedBox(
-                              width: iconPx,
-                              height: iconPx,
-                              child: iconChild,
-                            ),
-                          ),
-                        )
-                      else
-                        SizedBox(
-                          width: iconBox,
-                          height: iconBox,
-                          child: Center(
-                            child: SizedBox(
-                              width: iconPx,
-                              height: iconPx,
-                              child: iconChild,
-                            ),
-                          ),
-                        ),
-                      if (label != null) ...[
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                label!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.labelLarge.copyWith(
-                                  color:
-                                      labelColor ??
-                                      AppTextStyles.labelLarge.color,
+              ],
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: onTap,
+              child: Padding(
+                padding: contentPadding,
+                child: vertical
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          if (showIconBackground)
+                            Container(
+                              width: iconBox,
+                              height: iconBox,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: iconBg,
+                              ),
+                              child: Center(
+                                child: SizedBox(
+                                  width: iconPx,
+                                  height: iconPx,
+                                  child: iconChild,
                                 ),
                               ),
-                              if (subtitle case final s?) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  s,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.textSecondary,
-                                  ),
+                            )
+                          else
+                            SizedBox(
+                              width: iconBox,
+                              height: iconBox,
+                              child: Center(
+                                child: SizedBox(
+                                  width: iconPx,
+                                  height: iconPx,
+                                  child: iconChild,
                                 ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                      if (trailing != null) ...[
-                        const SizedBox(width: 8),
-                        trailing!,
-                      ],
-                    ],
-                  ),
+                              ),
+                            ),
+                          if (label != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              label!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: AppTextStyles.labelLarge.copyWith(
+                                color:
+                                    labelColor ??
+                                    AppTextStyles.labelLarge.color,
+                              ),
+                            ),
+                          ],
+                          if (subtitle case final s?) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              s,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          if (showIconBackground)
+                            Container(
+                              width: iconBox,
+                              height: iconBox,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: iconBg,
+                              ),
+                              child: Center(
+                                child: SizedBox(
+                                  width: iconPx,
+                                  height: iconPx,
+                                  child: iconChild,
+                                ),
+                              ),
+                            )
+                          else
+                            SizedBox(
+                              width: iconBox,
+                              height: iconBox,
+                              child: Center(
+                                child: SizedBox(
+                                  width: iconPx,
+                                  height: iconPx,
+                                  child: iconChild,
+                                ),
+                              ),
+                            ),
+                          if (label != null) ...[
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    label!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.labelLarge.copyWith(
+                                      color:
+                                          labelColor ??
+                                          AppTextStyles.labelLarge.color,
+                                    ),
+                                  ),
+                                  if (subtitle case final s?) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      s,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                          if (trailing != null) ...[
+                            const SizedBox(width: 8),
+                            trailing!,
+                          ],
+                        ],
+                      ),
+              ),
+            ),
           ),
         ),
       ),

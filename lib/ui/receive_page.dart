@@ -34,6 +34,7 @@ class ReceivePage extends StatefulWidget {
 
 class _ReceivePageState extends State<ReceivePage> {
   final _speedTracker = TransferSpeedTracker();
+  _ActivityFilter _activityFilter = _ActivityFilter.all;
   static const String _receiveLottieAsset = 'assets/lottie/Pulse.json';
   late final Future<ByteData> _receiveLottieData = rootBundle.load(
     _receiveLottieAsset,
@@ -69,36 +70,103 @@ class _ReceivePageState extends State<ReceivePage> {
       } catch (_) {}
     }
 
-    final dir = File(filePath).parent.path;
-    await OpenFilex.open(dir);
+    await OpenFilex.open(File(filePath).parent.path);
   }
 
-  Future<void> _showTransferMenu(TransferProgress progress) async {
+  Future<void> _showReceivedActions(TransferProgress progress) async {
     final path = progress.localPath;
     final control = widget.controller.controlFor(progress.transferId);
     final isInProgress = progress.status == TransferStatus.inProgress;
-    final paused = control?.paused.value ?? false;
+    final canOpenLocation = path != null && path.trim().isNotEmpty;
+    final canDelete =
+        progress.status == TransferStatus.completed && canOpenLocation;
+
     await showModalBottomSheet<void>(
       context: context,
-      showDragHandle: true,
-      builder: (context) {
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.68),
+      isScrollControlled: true,
+      builder: (sheetContext) {
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            child: Wrap(
+          top: false,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black54,
+                  blurRadius: 28,
+                  offset: Offset(0, -8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (isInProgress) ...[
-                  ListTile(
-                    leading: Icon(
-                      paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                      color: AppColors.textSecondary,
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.textTertiary,
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                    title: Text(paused ? 'Resume' : 'Pause'),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.cloud_download_outlined,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Received file',
+                            style: AppTextStyles.titleMedium,
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            progress.fileName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                if (isInProgress) ...[
+                  _actionMenuTile(
+                    icon: control?.paused.value == true
+                        ? Icons.play_arrow_rounded
+                        : Icons.pause_rounded,
+                    title: control?.paused.value == true ? 'Resume' : 'Pause',
                     enabled: control != null,
                     onTap: control == null
                         ? null
                         : () {
-                            Navigator.of(context).pop();
+                            Navigator.of(sheetContext).pop();
                             if (control.paused.value) {
                               widget.controller.resumeTransfer(
                                 progress.transferId,
@@ -110,62 +178,99 @@ class _ReceivePageState extends State<ReceivePage> {
                             }
                           },
                   ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.close_rounded,
-                      color: AppColors.textSecondary,
-                    ),
-                    title: const Text('Cancel'),
-                    enabled: control != null,
-                    onTap: control == null
-                        ? null
-                        : () {
-                            Navigator.of(context).pop();
-                            widget.controller.cancelTransfer(
-                              progress.transferId,
-                            );
-                          },
+                  const SizedBox(height: 8),
+                  _actionMenuTile(
+                    icon: Icons.close_rounded,
+                    title: 'Cancel transfer',
+                    iconColor: AppColors.danger,
+                    onTap: () {
+                      Navigator.of(sheetContext).pop();
+                      widget.controller.cancelTransfer(progress.transferId);
+                    },
                   ),
-                  const Divider(height: 1),
                 ],
-                ListTile(
-                  leading: const Icon(Icons.folder_open_rounded),
-                  title: const Text('Open location'),
-                  enabled: path != null && path.trim().isNotEmpty,
-                  onTap: (path == null || path.trim().isEmpty)
-                      ? null
-                      : () async {
-                          Navigator.of(context).pop();
-                          await _openLocation(path);
-                        },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.delete_outline_rounded),
-                  title: const Text('Delete'),
-                  enabled:
-                      progress.status == TransferStatus.completed &&
-                      path != null &&
-                      path.trim().isNotEmpty,
-                  onTap:
-                      (progress.status != TransferStatus.completed ||
-                          path == null ||
-                          path.trim().isEmpty)
-                      ? null
-                      : () async {
-                          Navigator.of(context).pop();
-                          try {
-                            await File(path).delete();
-                          } catch (_) {}
-                          widget.controller.dismissTransfer(
-                            progress.transferId,
-                          );
-                        },
-                ),
+                if (canOpenLocation) ...[
+                  if (isInProgress) const SizedBox(height: 8),
+                  _actionMenuTile(
+                    icon: Icons.folder_open_rounded,
+                    title: 'Open location',
+                    onTap: () async {
+                      Navigator.of(sheetContext).pop();
+                      await _openLocation(path);
+                    },
+                  ),
+                ],
+                if (canDelete) ...[
+                  const SizedBox(height: 8),
+                  _actionMenuTile(
+                    icon: Icons.delete_outline_rounded,
+                    title: 'Delete from device',
+                    iconColor: AppColors.danger,
+                    onTap: () async {
+                      Navigator.of(sheetContext).pop();
+                      try {
+                        await File(path).delete();
+                      } catch (_) {}
+                      widget.controller.dismissTransfer(progress.transferId);
+                    },
+                  ),
+                ],
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _actionMenuTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback? onTap,
+    Color? iconColor,
+    bool enabled = true,
+  }) {
+    final active = enabled && onTap != null;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: active ? onTap : null,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: active ? 0.055 : 0.025),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: active
+                    ? (iconColor ?? AppColors.textPrimary)
+                    : AppColors.textTertiary,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: active
+                      ? AppColors.textPrimary
+                      : AppColors.textTertiary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              if (active)
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textTertiary,
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -190,46 +295,63 @@ class _ReceivePageState extends State<ReceivePage> {
             return a.transferId.compareTo(b.transferId);
           });
 
-        if (ordered.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-            child: EmptyState(
-              title: 'Ready to receive',
-              message: 'Keep Sendix open to accept incoming transfers.',
-              iconBuilder: _buildReceiveEmptyIcon,
-              showIconBackground: false,
-            ),
-          );
-        }
+        final filtered = ordered.where(_matchesFilter).toList();
 
-        Widget header() {
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.swap_vert_rounded,
-                  size: 20,
-                  color: AppColors.primaryAccent,
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Activity', style: AppTextStyles.titleMedium),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Live sends & receives',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
+        Widget header() => Padding(
+          padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.swap_vert_rounded,
+                    size: 20,
+                    color: AppColors.primaryAccent,
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Activity', style: AppTextStyles.titleMedium),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Live sends & receives',
+                        style: AppTextStyles.bodySmall,
                       ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _ActivityFilter.values.map((filter) {
+                  return ChoiceChip(
+                    label: Text(filter.label),
+                    selected: _activityFilter == filter,
+                    onSelected: (_) => setState(() => _activityFilter = filter),
+                    selectedColor: AppColors.primary,
+                    backgroundColor: AppColors.surfaceSecondary,
+                    labelStyle: AppTextStyles.bodySmall.copyWith(
+                      color: _activityFilter == filter
+                          ? AppColors.bg
+                          : AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        }
+                    side: BorderSide(
+                      color: _activityFilter == filter
+                          ? AppColors.primary
+                          : AppColors.border,
+                    ),
+                    showCheckmark: false,
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        );
 
         Widget transferCard(TransferProgress progress) {
           final c = widget.controller.controlFor(progress.transferId);
@@ -241,7 +363,9 @@ class _ReceivePageState extends State<ReceivePage> {
             borderColor: Colors.white,
             borderOpacity: 0.13,
             blurSigma: 20,
-            onTap: () => _showTransferMenu(progress),
+            onTap: progress.direction == TransferDirection.receive
+                ? () => _showReceivedActions(progress)
+                : null,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
               child: c == null
@@ -302,10 +426,25 @@ class _ReceivePageState extends State<ReceivePage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   header(),
-                  for (var i = 0; i < ordered.length; i++) ...[
-                    if (i != 0) const SizedBox(height: 12),
-                    transferCard(ordered[i]),
-                  ],
+                  if (filtered.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: EmptyState(
+                        title: ordered.isEmpty
+                            ? 'Ready to receive'
+                            : 'No matching activity',
+                        message: ordered.isEmpty
+                            ? 'Keep Sendix open to accept incoming transfers.'
+                            : 'Try another activity filter.',
+                        iconBuilder: _buildReceiveEmptyIcon,
+                        showIconBackground: false,
+                      ),
+                    )
+                  else
+                    for (var i = 0; i < filtered.length; i++) ...[
+                      if (i != 0) const SizedBox(height: 12),
+                      transferCard(filtered[i]),
+                    ],
                 ],
               ),
             ),
@@ -321,4 +460,25 @@ class _ReceivePageState extends State<ReceivePage> {
     }
     return widget.outgoingStartTimeFor?.call(progress.transferId);
   }
+
+  bool _matchesFilter(TransferProgress progress) {
+    return switch (_activityFilter) {
+      _ActivityFilter.all =>
+        progress.direction == TransferDirection.receive ||
+            progress.status == TransferStatus.failed,
+      _ActivityFilter.received =>
+        progress.direction == TransferDirection.receive,
+      _ActivityFilter.failed => progress.status == TransferStatus.failed,
+    };
+  }
+}
+
+enum _ActivityFilter {
+  all('All'),
+  received('Received'),
+  failed('Failed');
+
+  const _ActivityFilter(this.label);
+
+  final String label;
 }

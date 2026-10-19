@@ -32,13 +32,8 @@ class TransferProgressTile extends StatelessWidget {
     final value = rawValue;
     final percent = (value * 100).clamp(0, 100).toStringAsFixed(0);
 
-    final speed = speedBytesPerSecond;
-    final remaining = speed != null && speed > 0 && progress.progress < 1
-        ? _formatDuration(
-            ((progress.totalBytes - progress.transferredBytes) / speed).ceil(),
-          )
-        : null;
-    final statusText = isPaused
+    const String? remaining = null;
+    var statusText = isPaused
         ? 'Paused'
         : switch (progress.status) {
             TransferStatus.pending => 'Starting…',
@@ -55,9 +50,12 @@ class TransferProgressTile extends StatelessWidget {
             TransferStatus.failed => 'Transfer failed',
             TransferStatus.cancelled => 'Cancelled',
           };
-
-    final transferredText =
-        '${_formatBytes(progress.transferredBytes.toDouble())} / ${_formatBytes(progress.totalBytes.toDouble())}';
+    if (progress.status == TransferStatus.inProgress) {
+      statusText = 'Transferring';
+    }
+    final errorText = progress.error == null
+        ? null
+        : userErrorMessage(progress.error!);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -105,9 +103,11 @@ class TransferProgressTile extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        SendixProgressBar(
-          value: value,
-          active: progress.status == TransferStatus.pending || isActive,
+        RepaintBoundary(
+          child: SendixProgressBar(
+            value: value,
+            active: progress.status == TransferStatus.pending || isActive,
+          ),
         ),
         const SizedBox(height: 8),
         Row(
@@ -125,58 +125,33 @@ class TransferProgressTile extends StatelessWidget {
             Expanded(
               child: Align(
                 alignment: Alignment.centerRight,
-                child: Text(
-                  statusText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
+                child: errorText == null
+                    ? Text(
+                        progress.status == TransferStatus.failed
+                            ? ''
+                            : statusText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      )
+                    : Text(
+                        errorText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.danger,
+                        ),
+                      ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        if (progress.status != TransferStatus.completed)
-          Text(
-            transferredText,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-        if (progress.error case final e?) ...[
-          const SizedBox(height: 8),
-          Text(
-            userErrorMessage(e),
-            style: AppTextStyles.bodySmall.copyWith(color: AppColors.danger),
-          ),
-        ],
       ],
     );
-  }
-
-  static String _formatBytes(double bytes) {
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    var value = bytes;
-    var unit = 0;
-    while (value >= 1024 && unit < units.length - 1) {
-      value /= 1024;
-      unit++;
-    }
-    final digits = unit == 0 ? 0 : (value < 10 ? 1 : 0);
-    return '${value.toStringAsFixed(digits)} ${units[unit]}';
-  }
-
-  static String _formatDuration(int seconds) {
-    if (seconds < 60) return '${seconds}s';
-    final minutes = seconds ~/ 60;
-    final remainder = seconds % 60;
-    if (minutes < 60) return '${minutes}m ${remainder}s';
-    return '${minutes ~/ 60}h ${minutes % 60}m';
   }
 }
 
@@ -221,11 +196,20 @@ class _AnimatedProgressBarState extends State<SendixProgressBar>
     final target = widget.value.clamp(0.0, 1.0).toDouble();
     final current = _valueAnimation.value;
     if ((target - current).abs() > 0.0001) {
-      _valueAnimation = Tween<double>(
-        begin: current,
-        end: target,
-      ).animate(CurvedAnimation(parent: _progress, curve: Curves.easeOutCubic));
-      _progress.forward(from: 0);
+      // Fast transfers can report many chunks while the previous animation
+      // is still running. Restarting that tween for every chunk makes the
+      // bar stutter and adds unnecessary work to the frame scheduler. Once
+      // an animation is already active, jump to the newest value and let the
+      // next update animate only after the bar has caught up.
+      if (_progress.isAnimating || target >= 0.999) {
+        _progress.stop();
+        _valueAnimation = AlwaysStoppedAnimation<double>(target);
+      } else {
+        _valueAnimation = Tween<double>(begin: current, end: target).animate(
+          CurvedAnimation(parent: _progress, curve: Curves.easeOutCubic),
+        );
+        _progress.forward(from: 0);
+      }
     }
     if (widget.active && !oldWidget.active) {
       _shimmer.repeat();
@@ -243,7 +227,7 @@ class _AnimatedProgressBarState extends State<SendixProgressBar>
 
   @override
   Widget build(BuildContext context) {
-    final trackColor = AppColors.surfaceTertiary;
+    final trackColor = Colors.white.withValues(alpha: 0.07);
     final baseColor = AppColors.primaryAccent;
     final barHeight = 6.0;
 

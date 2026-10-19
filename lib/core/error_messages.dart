@@ -1,26 +1,26 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-
-/// Keeps technical diagnostics in debug builds while giving users short,
-/// actionable messages in release builds.
+/// Converts technical transfer errors into short, actionable messages.
 String userErrorMessage(Object error) {
   final raw = error.toString();
-  if (kDebugMode) return raw;
-
   final text = raw.toLowerCase();
+  if (text.contains('timeout') ||
+      text.contains('timed out') ||
+      text.contains('future not completed')) {
+    return 'The transfer timed out. Please try again.';
+  }
   if (error is SocketException ||
       text.contains('socket') ||
       text.contains('connection timed out') ||
       text.contains('connection reset') ||
       text.contains('connection refused')) {
-    return 'Connection lost. Check that both devices are on the same network.';
+    return 'Connection lost. Check both devices and try again.';
   }
   if (text.contains('permission') || text.contains('access denied')) {
-    return 'Permission denied. Check the app permissions and try again.';
+    return 'Sendix cannot access this file or folder.';
   }
   if (text.contains('storage') || text.contains('no space')) {
-    return 'Not enough storage space to complete this action.';
+    return 'Not enough storage space to receive this file.';
   }
   if (text.contains('cancel')) return 'Transfer cancelled.';
   if (text.contains('checksum') || text.contains('verification')) {
@@ -29,5 +29,5 @@ String userErrorMessage(Object error) {
   if (text.contains('rejected') || text.contains('declined')) {
     return 'The transfer was declined.';
   }
-  return 'Something went wrong. Please try again.';
+  return 'The transfer could not be completed. Please try again.';
 }

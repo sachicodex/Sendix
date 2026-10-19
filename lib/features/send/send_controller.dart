@@ -42,6 +42,9 @@ class SendController {
 
   final Map<String, TransferControl> _controls = {};
   final Map<String, DateTime> _startTimes = {};
+  final Map<String, TransferProgress> _pendingProgress = {};
+  final Map<String, Timer> _progressTimers = {};
+  static const Duration _progressUpdateInterval = Duration(milliseconds: 50);
 
   TransferControl? controlFor(String transferId) => _controls[transferId];
 
@@ -69,6 +72,11 @@ class SendController {
   }) => _discovery.refresh(duration: duration);
 
   Future<void> dispose() async {
+    for (final timer in _progressTimers.values) {
+      timer.cancel();
+    }
+    _progressTimers.clear();
+    _pendingProgress.clear();
     for (final c in _controls.values) {
       await c.dispose();
     }
@@ -107,6 +115,28 @@ class SendController {
   }
 
   void _updateProgress(TransferProgress progress) {
+    if (progress.status == TransferStatus.inProgress) {
+      _pendingProgress[progress.transferId] = progress;
+      if (!_progressTimers.containsKey(progress.transferId)) {
+        _publishProgress(progress);
+        _pendingProgress.remove(progress.transferId);
+        _progressTimers[progress.transferId] = Timer.periodic(
+          _progressUpdateInterval,
+          (_) {
+            final latest = _pendingProgress.remove(progress.transferId);
+            if (latest != null) _publishProgress(latest);
+          },
+        );
+      }
+      return;
+    }
+
+    _progressTimers.remove(progress.transferId)?.cancel();
+    _pendingProgress.remove(progress.transferId);
+    _publishProgress(progress);
+  }
+
+  void _publishProgress(TransferProgress progress) {
     _startTimes.putIfAbsent(progress.transferId, DateTime.now);
     final current = List<TransferProgress>.from(transfers.value);
     final index = current.indexWhere(
